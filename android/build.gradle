@@ -1,0 +1,110 @@
+buildscript {
+  ext.getExtOrDefault = {name ->
+    return rootProject.ext.has(name) ? rootProject.ext.get(name) : project.properties['EverypayGpayRnBridge_' + name]
+  }
+
+  repositories {
+    google()
+    mavenCentral()
+  }
+
+  dependencies {
+    classpath "com.android.tools.build:gradle:8.7.2"
+    // noinspection DifferentKotlinGradleVersion
+    classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${getExtOrDefault('kotlinVersion')}"
+
+    // For dev
+    classpath("com.facebook.react:react-native-gradle-plugin")
+  }
+}
+
+
+apply plugin: "com.android.library"
+apply plugin: "kotlin-android"
+
+if (isNewArchitectureEnabled()) {
+  apply plugin: 'com.facebook.react'
+}
+
+def getExtOrIntegerDefault(name) {
+  return rootProject.ext.has(name) ? rootProject.ext.get(name) : (project.properties["EverypayGpayRnBridge_" + name]).toInteger()
+}
+
+def isNewArchitectureEnabled() {
+  return project.hasProperty("newArchEnabled") && project.newArchEnabled == "true"
+}
+
+android {
+  namespace "com.everypay.gpayrnbridge"
+
+  compileSdkVersion getExtOrIntegerDefault("compileSdkVersion")
+
+  defaultConfig {
+    minSdkVersion getExtOrIntegerDefault("minSdkVersion")
+    targetSdkVersion getExtOrIntegerDefault("targetSdkVersion")
+    buildConfigField("boolean", "IS_NEW_ARCHITECTURE_ENABLED", isNewArchitectureEnabled().toString())
+  }
+
+  buildFeatures {
+    buildConfig true
+  }
+
+  buildTypes {
+    release {
+      minifyEnabled false
+    }
+  }
+
+  lintOptions {
+    disable "GradleCompatible"
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_1_8
+    targetCompatibility JavaVersion.VERSION_1_8
+  }
+
+  sourceSets {
+    main {
+      java.srcDirs += [
+        "generated/java",
+        "generated/jni"
+      ]
+
+      if (isNewArchitectureEnabled()) {
+          java.srcDirs += ['src/newarch']
+      } else {
+          java.srcDirs += ['src/oldarch']
+      }
+    }
+  }
+}
+
+repositories {
+  mavenCentral()
+  google()
+}
+
+def kotlin_version = getExtOrDefault("kotlinVersion")
+
+dependencies {
+  // Dev only
+  // Get React Native version from package.json peerDependencies
+  def reactNativeVersion = "0.79.2" // Set this to match the value from package.json
+  compileOnly "com.facebook.react:react-android:$reactNativeVersion"
+  compileOnly "com.facebook.react:hermes-android:$reactNativeVersion"
+  compileOnly "androidx.appcompat:appcompat:1.7.1"
+  // End of dev
+
+
+  implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+  implementation "com.google.android.gms:play-services-wallet:19.4.0"
+}
+
+if (isNewArchitectureEnabled()) {
+  react {
+    jsRootDir = file("../src/")
+    libraryName = "EverypayGpayRnBridge"
+    codegenJavaPackageName = "com.everypay.gpayrnbridge"
+  }
+}

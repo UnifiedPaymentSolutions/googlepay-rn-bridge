@@ -1,0 +1,16 @@
+pluginManagement {
+  repositories {
+    gradlePluginPortal()
+    google()
+    mavenCentral()
+  }
+}
+
+// Include the React Native Gradle plugin from node_modules
+includeBuild("../node_modules/@react-native/gradle-plugin") {
+  dependencySubstitution {
+    substitute(module("com.facebook.react:react-native-gradle-plugin")).using(project(":react-native-gradle-plugin"))
+  }
+}
+
+rootProject.name = 'EverypayGpayRnBridge'
