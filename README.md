@@ -8,6 +8,10 @@ EveryPay Google Pay React Native Bridge (Android Only). Typescript support.
 npm install @everypay/googlepay-rn-bridge
 ```
 
+```sh
+yarn add @everypay/googlepay-rn-bridge
+```
+
 ## Usage
 
 ```js
@@ -29,8 +33,7 @@ function App(): React.JSX.Element {
     currencyCode: "EUR",
     accountName: "<EVERYPAY_ACCOUNT_NAME>",
     allowedCardNetworks: ["MASTERCARD", "VISA"],
-    allowedCardAuthMethods: ["PAN_ONLY", "CRYPTOGRAM_3DS"],
-    gatewayMerchantId: '<MERCHANT_ID>',
+    allowedCardAuthMethods: ["PAN_ONLY", "CRYPTOGRAM_3DS"]
   }
 
   const handlePayment = async (res: PaymentProcessResponse) => {
@@ -107,7 +110,6 @@ To use the Google Pay API on Android, your app must meet the following requireme
 | `accountName`           | `string`                                         | EveryPay account name.                           |
 | `allowedCardNetworks`   | `('MASTERCARD' \| 'VISA')[]` (optional)          | Allowed card networks.                           |
 | `allowedCardAuthMethods`| `('PAN_ONLY' \| 'CRYPTOGRAM_3DS')[]` (optional)  | Allowed card authentication methods.             |
-| `gatewayMerchantId`     | `string`                                         | Google Pay gateway merchant ID.                  |
 
 #### PaymentProcessResponse Example
 

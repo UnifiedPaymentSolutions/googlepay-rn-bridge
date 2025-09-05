@@ -26,4 +26,4 @@ jobs:
       - run: yarn lint
       
       - name: Test build (prepare)
-        run: yarn prepare
+        run: yarn build

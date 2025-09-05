@@ -2,6 +2,7 @@
   "name": "@everypay/googlepay-rn-bridge",
   "version": "1.0.0",
   "description": "EveryPay Google Pay React Native Bridge (Android Only)",
+  "homepage": "https://github.com/UnifiedPaymentSolutions/googlepay-rn-bridge",
   "publishConfig": {
     "access": "public"
   },
@@ -38,7 +39,7 @@
     "test": "jest",
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
-    "prepare": "bob build"
+    "build": "bob build"
   },
   "keywords": [
     "react-native",
