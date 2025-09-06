@@ -25,11 +25,22 @@ import {
 import { EveryPayGooglePayError } from './everyPayError';
 import { ERROR_CODES } from './constants';
 
-// @ts-ignore
-const isFabricEnabled = global.nativeFabricUIManager != null;
-const NativeGooglePayButton = isFabricEnabled
-  ? require('./specs/GooglePayButtonNativeComponent').default
-  : requireNativeComponent('EveryPayGooglePayButton');
+// Only require the native component on Android
+const NativeGooglePayButton =
+  Platform.OS === 'android'
+    ? (() => {
+        try {
+          // @ts-ignore
+          const isFabricEnabled = global.nativeFabricUIManager != null;
+          return isFabricEnabled
+            ? require('./specs/GooglePayButtonNativeComponent').default
+            : requireNativeComponent('EveryPayGooglePayButton');
+        } catch (error) {
+          console.warn('Native Google Pay component not available:', error);
+          return null;
+        }
+      })()
+    : null;
 
 interface GooglePayButtonProps {
   onPressCallback?: (result: PaymentProcessResponse) => void;
@@ -61,6 +72,11 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({
   const initGooglePay = async () => {
     if (Platform.OS === 'ios') {
       console.log('GooglePayButton is not supported on iOS');
+      return;
+    }
+
+    if (!NativeGooglePayButton) {
+      console.warn('Google Pay native component is not available');
       return;
     }
 

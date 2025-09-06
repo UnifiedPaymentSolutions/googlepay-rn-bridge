@@ -8,10 +8,6 @@ module.exports = {
             'import com.everypay.gpayrnbridge.EverypayGpayRnBridgePackage;',
           packageInstance: 'new EverypayGpayRnBridgePackage()',
         },
-        ios: {
-          sourceDir: './ios',
-          podspecPath: './EverypayGpayRnBridge.podspec',
-        },
       },
     },
   },

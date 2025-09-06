@@ -45,7 +45,7 @@ function App(): React.JSX.Element {
   };
 
   return (
-      <GooglePayButton 
+      <GooglePayButton
         onPressCallback={handlePayment}
         config={config}
         amount={1}
@@ -83,33 +83,32 @@ To use the Google Pay API on Android, your app must meet the following requireme
 
 ### Props
 
-
 #### GooglePayButton Props
 
-| Prop Name         | Type                                                      | Description                                      |
-|-------------------|-----------------------------------------------------------|--------------------------------------------------|
-| `onPressCallback` | `(result: PaymentProcessResponse) => void` (optional)     | Callback function called after payment process.   |
-| `config`          | `GooglePayButtonConfig`                                   | Configuration object for Google Pay & EveryPay.   |
-| `theme`           | `'light' \| 'dark'` (optional, default: `'dark'`)         | Button theme.                                    |
-| `amount`          | `number`                                                  | Payment amount.                                  |
-| `label`           | `string`                                                  | Label for the payment (e.g., product name).       |
-| `orderReference`  | `string`                                                  | Unique reference for the order.                   |
-| `customerEmail`   | `string`                                                  | Customer's email address.                        |
-| `customerIp`      | `string` (optional)                                       | Customer's IP address.                           |
+| Prop Name         | Type                                                  | Description                                     |
+| ----------------- | ----------------------------------------------------- | ----------------------------------------------- |
+| `onPressCallback` | `(result: PaymentProcessResponse) => void` (optional) | Callback function called after payment process. |
+| `config`          | `GooglePayButtonConfig`                               | Configuration object for Google Pay & EveryPay. |
+| `theme`           | `'light' \| 'dark'` (optional, default: `'dark'`)     | Button theme.                                   |
+| `amount`          | `number`                                              | Payment amount.                                 |
+| `label`           | `string`                                              | Label for the payment (e.g., product name).     |
+| `orderReference`  | `string`                                              | Unique reference for the order.                 |
+| `customerEmail`   | `string`                                              | Customer's email address.                       |
+| `customerIp`      | `string` (optional)                                   | Customer's IP address.                          |
 
 #### GooglePayButtonConfig Fields
 
-| Field                   | Type                                             | Description                                      |
-|-------------------------|--------------------------------------------------|--------------------------------------------------|
-| `apiUsername`           | `string`                                         | EveryPay API username.                           |
-| `apiSecret`             | `string`                                         | EveryPay API secret.                             |
-| `apiUrl`                | `string`                                         | EveryPay API base URL.                           |
-| `environment`           | `'TEST' \| 'PRODUCTION'`                        | Google Pay environment. (default: 'TEST')                          |
-| `countryCode`           | `string`                                         | Country code (e.g., 'EE').                       |
-| `currencyCode`          | `string` (optional)                              | Currency code (e.g., 'EUR').                     |
-| `accountName`           | `string`                                         | EveryPay account name.                           |
-| `allowedCardNetworks`   | `('MASTERCARD' \| 'VISA')[]` (optional)          | Allowed card networks.                           |
-| `allowedCardAuthMethods`| `('PAN_ONLY' \| 'CRYPTOGRAM_3DS')[]` (optional)  | Allowed card authentication methods.             |
+| Field                    | Type                                            | Description                               |
+| ------------------------ | ----------------------------------------------- | ----------------------------------------- |
+| `apiUsername`            | `string`                                        | EveryPay API username.                    |
+| `apiSecret`              | `string`                                        | EveryPay API secret.                      |
+| `apiUrl`                 | `string`                                        | EveryPay API base URL.                    |
+| `environment`            | `'TEST' \| 'PRODUCTION'`                        | Google Pay environment. (default: 'TEST') |
+| `countryCode`            | `string`                                        | Country code (e.g., 'EE').                |
+| `currencyCode`           | `string` (optional)                             | Currency code (e.g., 'EUR').              |
+| `accountName`            | `string`                                        | EveryPay account name.                    |
+| `allowedCardNetworks`    | `('MASTERCARD' \| 'VISA')[]` (optional)         | Allowed card networks.                    |
+| `allowedCardAuthMethods` | `('PAN_ONLY' \| 'CRYPTOGRAM_3DS')[]` (optional) | Allowed card authentication methods.      |
 
 #### PaymentProcessResponse Example
 
