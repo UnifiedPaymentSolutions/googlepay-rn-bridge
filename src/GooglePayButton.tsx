@@ -1,6 +1,5 @@
-import React, { useEffect, useState /* , useMemo */ } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  // NativeModules,
   requireNativeComponent,
   TouchableOpacity,
   StyleSheet,
@@ -66,6 +65,8 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({
   customerIp,
 }) => {
   const [isReady, setIsReady] = useState<boolean | null>(null);
+  const [isMakingPaymentRequest, setIsMakingPaymentRequest] =
+    useState<boolean>(false);
   const [EPSessionInfo, setEPSessionInfo] =
     useState<OpenEPSessionResponse | null>(null);
 
@@ -156,6 +157,7 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({
   };
 
   const onPress = async () => {
+    setIsMakingPaymentRequest(true);
     let merchantInfo: GetMerchantInfoResponse | null = null;
 
     try {
@@ -182,6 +184,7 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({
         body
       );
     } catch (error: any) {
+      setIsMakingPaymentRequest(false);
       console.error('Error making merchant info request', error);
       onPressCallback?.({
         state: 'failed',
@@ -198,6 +201,7 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({
 
     if (!EPSessionInfo) {
       console.log('EPSessionInfo is not set');
+      setIsMakingPaymentRequest(false);
       return;
     }
 
@@ -284,6 +288,8 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({
         onPressCallback?.({ state: 'failed', error: e });
         console.error('GooglePayButton error', e);
       }
+    } finally {
+      setIsMakingPaymentRequest(false);
     }
   };
 
@@ -295,9 +301,13 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({
     <TouchableOpacity
       testID="google-pay-button"
       onPress={onPress}
-      disabled={disabled}
+      disabled={disabled || isMakingPaymentRequest}
       // activeOpacity={disabled ? 0.3 : 1}
-      style={[disabled ? styles.disabled : styles.notDisabled]}
+      style={[
+        disabled || isMakingPaymentRequest
+          ? styles.disabled
+          : styles.notDisabled,
+      ]}
     >
       <NativeGooglePayButton
         testID="native-google-pay-button"
