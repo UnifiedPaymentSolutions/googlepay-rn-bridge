@@ -8,6 +8,7 @@ module.exports = {
             'import com.everypay.gpayrnbridge.EverypayGpayRnBridgePackage;',
           packageInstance: 'new EverypayGpayRnBridgePackage()',
         },
+        ios: null,
       },
     },
   },
