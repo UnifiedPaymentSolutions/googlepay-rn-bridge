@@ -27,7 +27,7 @@ class GooglePayButtonView: FrameLayout {
   }
 
   var allowedPaymentMethods: String? = null
-  var type = ButtonConstants.ButtonType.BUY
+  var buttonType = ButtonConstants.ButtonType.BUY
   var theme = ButtonConstants.ButtonTheme.DARK
   var cornerRadius = 10
   private var button: View? = null
@@ -73,7 +73,7 @@ class GooglePayButtonView: FrameLayout {
 
     val options = ButtonOptions.newBuilder()
       .setAllowedPaymentMethods(allowedPaymentMethodsJson)
-      .setButtonType(type)
+      .setButtonType(buttonType)
       .setButtonTheme(theme)
       .setCornerRadius(PixelUtil.toPixelFromDIP(this.cornerRadius.toDouble()).toInt())
     googlePayButton.initialize(options.build())

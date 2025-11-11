@@ -1,10 +1,9 @@
-package java.com.everypaygpayrnbridge
+package com.everypaygpayrnbridge
 
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
-import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
 import com.everypay.gpayrnbridge.EverypayGpayRnBridgeModuleImpl
 
@@ -18,35 +17,34 @@ class EverypayGpayRnBridgeModule(reactContext: ReactApplicationContext) :
     return EverypayGpayRnBridgeModuleImpl.NAME
   }
 
+  // ========== SDK-POWERED METHODS ==========
+
   @ReactMethod
-  fun init(
-    environment: String,
-    allowedCardNetworks: ReadableArray,
-    allowedCardAuthMethods: ReadableArray,
+  fun initializeWithBackendData(
+    config: ReadableMap,
+    backendData: ReadableMap,
     promise: Promise
   ) {
-    implementation.init(environment, allowedCardNetworks, allowedCardAuthMethods, promise)
+    implementation.initializeWithBackendData(config, backendData, promise)
   }
 
-  /**
-   * Method exposed to the React Native app that checks if Google Pay is available.
-   *
-   * @param promise returned to the caller.
-   */
   @ReactMethod
-  fun isReadyToPay(promise: Promise) {
-    implementation.isReadyToPay(promise)
+  fun initializeSDKMode(config: ReadableMap, promise: Promise) {
+    implementation.initializeSDKMode(config, promise)
   }
 
-  /**
-   * Method exposed to the React Native app that makes a payment request to the Google Pay API.
-   *
-   * @param request containing the JSON for the Google Pay API request.
-   * @param promise returned to the caller.
-   */
   @ReactMethod
-  fun loadPaymentData(request: ReadableMap, promise: Promise) {
-    val currentActivity = reactApplicationContext.currentActivity
-    implementation.loadPaymentData(request, promise, currentActivity)
+  fun makePaymentWithBackendData(backendData: ReadableMap, promise: Promise) {
+    implementation.makePaymentWithBackendData(backendData, promise)
+  }
+
+  @ReactMethod
+  fun makePaymentSDKMode(paymentData: ReadableMap, promise: Promise) {
+    implementation.makePaymentSDKMode(paymentData, promise)
+  }
+
+  @ReactMethod(isBlockingSynchronousMethod = true)
+  fun isProcessingPayment(): Boolean {
+    return implementation.isProcessingPayment()
   }
 }

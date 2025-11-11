@@ -12,6 +12,7 @@ export interface NativeProps extends ViewProps {
   allowedPaymentMethods?: string;
   onPress?: BubblingEventHandler<OnPressEvent> | null;
   theme: string;
+  buttonType?: string;
 }
 
 export default codegenNativeComponent<NativeProps>(

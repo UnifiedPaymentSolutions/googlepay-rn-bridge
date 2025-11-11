@@ -74,7 +74,7 @@
     "prettier": "^3.0.3",
     "react": "19.0.0",
     "react-native": "0.79.2",
-    "react-native-builder-bob": "^0.40.11",
+    "react-native-builder-bob": "latest",
     "react-test-renderer": "^19.0.0",
     "turbo": "^1.10.7",
     "typescript": "^5.8.3"
@@ -95,7 +95,7 @@
     ],
     "testEnvironment": "node",
     "transformIgnorePatterns": [
-      "node_modules/(?!(react-native|@react-native|react-native-uuid)/)"
+      "node_modules/(?!(react-native|@react-native)/)"
     ],
     "collectCoverageFrom": [
       "src/**/*.{ts,tsx}",
@@ -146,8 +146,5 @@
     "languages": "kotlin-objc",
     "type": "turbo-module",
     "version": "0.50.3"
-  },
-  "dependencies": {
-    "react-native-uuid": "^2.0.3"
   }
 }

@@ -6,8 +6,8 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.module.model.ReactModuleInfo
 import com.facebook.react.module.model.ReactModuleInfoProvider
 import com.facebook.react.uimanager.ViewManager
-import java.com.everypaygpayrnbridge.EverypayGpayRnBridgeModule
-import java.com.everypaygpayrnbridge.GooglePayButtonManager
+import com.everypaygpayrnbridge.EverypayGpayRnBridgeModule
+import com.everypaygpayrnbridge.GooglePayButtonManager
 import java.util.HashMap
 
 class EverypayGpayRnBridgePackage : BaseReactPackage() {

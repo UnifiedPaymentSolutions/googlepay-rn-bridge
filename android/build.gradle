@@ -1,23 +1,6 @@
-buildscript {
-  ext.getExtOrDefault = {name ->
-    return rootProject.ext.has(name) ? rootProject.ext.get(name) : project.properties['EverypayGpayRnBridge_' + name]
-  }
-
-  repositories {
-    google()
-    mavenCentral()
-  }
-
-  dependencies {
-    classpath "com.android.tools.build:gradle:8.7.2"
-    // noinspection DifferentKotlinGradleVersion
-    classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${getExtOrDefault('kotlinVersion')}"
-
-    // For dev
-    classpath("com.facebook.react:react-native-gradle-plugin")
-  }
+ext.getExtOrDefault = {name ->
+  return rootProject.ext.has(name) ? rootProject.ext.get(name) : project.properties['EverypayGpayRnBridge_' + name]
 }
-
 
 apply plugin: "com.android.library"
 apply plugin: "kotlin-android"
@@ -60,8 +43,12 @@ android {
   }
 
   compileOptions {
-    sourceCompatibility JavaVersion.VERSION_1_8
-    targetCompatibility JavaVersion.VERSION_1_8
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+
+  kotlinOptions {
+    jvmTarget = '17'
   }
 
   sourceSets {
@@ -85,12 +72,20 @@ repositories {
   google()
 }
 
+// Define repositories for all subprojects including SDK
+allprojects {
+  repositories {
+    mavenCentral()
+    google()
+  }
+}
+
 def kotlin_version = getExtOrDefault("kotlinVersion")
 
 dependencies {
   // Dev only
   // Get React Native version from package.json peerDependencies
-  def reactNativeVersion = "0.79.2" // Set this to match the value from package.json
+  def reactNativeVersion = "0.81.1" // Set this to match the value from package.json
   compileOnly "com.facebook.react:react-android:$reactNativeVersion"
   compileOnly "com.facebook.react:hermes-android:$reactNativeVersion"
   compileOnly "androidx.appcompat:appcompat:1.7.1"
@@ -99,6 +94,9 @@ dependencies {
 
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
   implementation "com.google.android.gms:play-services-wallet:19.4.0"
+
+  // EveryPay Google Pay SDK
+  implementation project(':everypay-gpay-sdk')
 }
 
 if (isNewArchitectureEnabled()) {

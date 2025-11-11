@@ -14,3 +14,8 @@ includeBuild("../node_modules/@react-native/gradle-plugin") {
 }
 
 rootProject.name = 'EverypayGpayRnBridge'
+
+// Include EveryPay Google Pay SDK as local module
+// TODO: update once the SDK is public
+include ':everypay-gpay-sdk'
+project(':everypay-gpay-sdk').projectDir = new File(rootProject.projectDir, '../../everypay-gpay-sdk-client/libraries/gpay')
