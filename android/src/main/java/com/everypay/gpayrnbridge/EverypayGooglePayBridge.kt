@@ -28,6 +28,8 @@ class EverypayGooglePayBridge(
 ) {
     private var helper: EverypayGooglePayHelper? = null
     private var config: EverypayConfig? = null
+    private var gatewayId: String? = null
+    private var gatewayMerchantId: String? = null
     private val coroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val requestCode = 991
 
@@ -69,7 +71,17 @@ class EverypayGooglePayBridge(
             helper!!.initializeWithBackendData(backendData) { result ->
                 when (result) {
                     is GooglePayReadinessResult.Success -> {
-                        promise.resolve(result.isReady)
+                        // Store gateway info
+                        gatewayId = backendData.gatewayId
+                        gatewayMerchantId = backendData.gatewayMerchantId
+
+                        // Return object with readiness status and gateway info
+                        val resultMap = Arguments.createMap().apply {
+                            putBoolean("isReady", result.isReady)
+                            putString("gatewayId", backendData.gatewayId)
+                            putString("gatewayMerchantId", backendData.gatewayMerchantId)
+                        }
+                        promise.resolve(resultMap)
                     }
                     is GooglePayReadinessResult.Error -> {
                         promise.reject(result.code, result.message, result.exception)
@@ -120,7 +132,21 @@ class EverypayGooglePayBridge(
             helper!!.initialize { result ->
                 when (result) {
                     is GooglePayReadinessResult.Success -> {
-                        promise.resolve(result.isReady)
+                        // Get gateway info from helper after initialization
+                        val gateway = helper!!.getGatewayId()
+                        val gatewayMerchant = helper!!.getGatewayMerchantId()
+
+                        // Store gateway info
+                        gatewayId = gateway
+                        gatewayMerchantId = gatewayMerchant
+
+                        // Return object with readiness status and gateway info
+                        val resultMap = Arguments.createMap().apply {
+                            putBoolean("isReady", result.isReady)
+                            putString("gatewayId", gateway)
+                            putString("gatewayMerchantId", gatewayMerchant)
+                        }
+                        promise.resolve(resultMap)
                     }
                     is GooglePayReadinessResult.Error -> {
                         promise.reject(result.code, result.message, result.exception)

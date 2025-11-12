@@ -7,11 +7,7 @@ import {
 } from 'react-native';
 
 import NativeEverypayGpayRnBridge from './specs/NativeEverypayGpayRnBridge';
-import type {
-  GooglePayButtonProps,
-  GooglePayBackendData,
-  SDKModePaymentData,
-} from './types';
+import type { GooglePayButtonProps, SDKModePaymentData } from './types';
 
 // Only require the native component on Android
 const NativeGooglePayButton =
@@ -30,45 +26,30 @@ const NativeGooglePayButton =
       })()
     : null;
 
-const GooglePayButton: React.FC<GooglePayButtonProps> = ({
-  config,
-  amount,
-  label,
-  orderReference,
-  customerEmail,
-  customerIp,
-  backendUrl,
-  onPressCallback,
-  onPaymentSuccess,
-  onPaymentError,
-  onPaymentCanceled,
-  theme = 'dark',
-  buttonType = 'buy',
-  disabled = false,
-}) => {
+const GooglePayButton: React.FC<GooglePayButtonProps> = (props) => {
+  const {
+    config,
+    onPressCallback,
+    onPaymentSuccess,
+    onPaymentError,
+    onPaymentCanceled,
+    theme = 'dark',
+    buttonType = 'buy',
+    disabled = false,
+  } = props;
+
   const [isReady, setIsReady] = useState<boolean | null>(null);
   const [isMakingPaymentRequest, setIsMakingPaymentRequest] =
     useState<boolean>(false);
+  const [gatewayInfo, setGatewayInfo] = useState<{
+    gateway: string;
+    gatewayMerchantId: string;
+  } | null>(null);
 
-  // Auto-detect mode based on configuration
-  const isSDKMode = !!(config.apiUsername && config.apiSecret);
-  const isBackendMode = !!backendUrl;
-
-  // Validate mutually exclusive modes
-  if (isBackendMode && isSDKMode) {
-    console.warn(
-      '[GooglePayButton] Both backendUrl and SDK credentials provided. ' +
-        'Using Backend mode (more secure). Remove apiUsername/apiSecret if using Backend mode.'
-    );
-  }
-
-  if (!isBackendMode && !isSDKMode) {
-    throw new Error(
-      '[GooglePayButton] Invalid configuration. Provide either:\n' +
-        '• backendUrl (Backend mode - recommended)\n' +
-        '• apiUsername + apiSecret (SDK mode)'
-    );
-  }
+  // Determine mode based on which props are present
+  const isBackendMode =
+    'backendData' in props && props.backendData !== undefined;
+  const isSDKMode = !isBackendMode;
 
   useEffect(() => {
     let isMounted = true;
@@ -85,23 +66,10 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({
       }
 
       try {
-        if (isBackendMode && backendUrl) {
-          // Backend mode: Get init data from backend
-          const initResponse = await fetch(`${backendUrl}/init`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              environment: config.environment,
-              countryCode: config.countryCode,
-            }),
-          });
-
-          if (!initResponse.ok) {
-            throw new Error('Failed to initialize from backend');
-          }
-
-          const backendData: GooglePayBackendData = await initResponse.json();
-          const ready =
+        if (isBackendMode) {
+          // Backend mode: Use provided backend data (combines open_session + create_payment)
+          const backendData = (props as any).backendData;
+          const initResult =
             await NativeEverypayGpayRnBridge.initializeWithBackendData(
               config,
               backendData
@@ -109,20 +77,30 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({
 
           // Only update state if component is still mounted
           if (isMounted) {
-            setIsReady(ready);
+            setIsReady(initResult.isReady);
+            // Store gateway info for button configuration
+            setGatewayInfo({
+              gateway: initResult.gatewayId,
+              gatewayMerchantId: initResult.gatewayMerchantId,
+            });
           }
         } else if (isSDKMode) {
           // SDK mode: Direct SDK initialization
-          const ready =
+          const initResult =
             await NativeEverypayGpayRnBridge.initializeSDKMode(config);
 
           // Only update state if component is still mounted
           if (isMounted) {
-            setIsReady(ready);
+            setIsReady(initResult.isReady);
+            // Store gateway info for button configuration
+            setGatewayInfo({
+              gateway: initResult.gatewayId,
+              gatewayMerchantId: initResult.gatewayMerchantId,
+            });
           }
         } else {
           throw new Error(
-            'Invalid configuration: provide either backendUrl (Backend mode) or apiUsername/apiSecret (SDK mode)'
+            'Invalid configuration: provide either backendData (Backend mode) or apiUsername/apiSecret (SDK mode)'
           );
         }
       } catch (error: any) {
@@ -149,15 +127,31 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({
       'CRYPTOGRAM_3DS',
     ];
 
-    return [
-      {
-        type: 'CARD',
-        parameters: {
-          allowedCardNetworks: cardNetworks,
-          allowedAuthMethods: authMethods,
-        },
+    const paymentMethod: any = {
+      type: 'CARD',
+      parameters: {
+        allowedCardNetworks: cardNetworks,
+        allowedAuthMethods: authMethods,
       },
-    ];
+    };
+
+    // Add tokenizationSpecification if gateway info is available
+    // This is required for Google Pay to display card digits
+    if (gatewayInfo && gatewayInfo.gateway && gatewayInfo.gatewayMerchantId) {
+      paymentMethod.tokenizationSpecification = {
+        type: 'PAYMENT_GATEWAY',
+        parameters: {
+          gateway: gatewayInfo.gateway,
+          gatewayMerchantId: gatewayInfo.gatewayMerchantId,
+        },
+      };
+    } else {
+      console.warn(
+        '[GooglePayButton] Gateway info not available, button may not display card digits'
+      );
+    }
+
+    return [paymentMethod];
   };
 
   const onPress = async () => {
@@ -166,45 +160,24 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({
     try {
       let paymentData: any;
 
-      if (isBackendMode && backendUrl) {
+      if (isBackendMode) {
         // Backend mode flow
-        if (!amount || !label) {
-          throw new Error('Backend mode requires amount and label');
-        }
+        // User provides backend data (already fetched from /create-payment endpoint)
+        const backendData = (props as any).backendData;
 
-        // Step 1: Get payment data from backend
-        const paymentResponse = await fetch(`${backendUrl}/create-payment`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            amount,
-            label,
-            orderReference,
-          }),
-        });
-
-        if (!paymentResponse.ok) {
-          throw new Error('Failed to create payment on backend');
-        }
-
-        const backendPaymentData: GooglePayBackendData =
-          await paymentResponse.json();
-
-        // Step 2: Show Google Pay and get token
+        // Step 1: Show Google Pay and get token
         const tokenData =
           await NativeEverypayGpayRnBridge.makePaymentWithBackendData(
-            backendPaymentData
+            backendData
           );
 
-        // Step 3: Call user callback with token data
+        // Step 2: Call user callback with token data
+        // User sends this to their backend /process-token endpoint
         paymentData = await onPressCallback(tokenData);
       } else if (isSDKMode) {
         // SDK mode flow
-        if (!amount || !label || !orderReference || !customerEmail) {
-          throw new Error(
-            'SDK mode requires amount, label, orderReference, and customerEmail'
-          );
-        }
+        const { amount, label, orderReference, customerEmail, customerIp } =
+          props as any;
 
         const sdkPaymentData: SDKModePaymentData = {
           amount: amount.toString(),
@@ -236,7 +209,7 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({
     }
   };
 
-  if (!isReady) {
+  if (!isReady || !gatewayInfo) {
     return null;
   }
 

@@ -7,89 +7,40 @@ This guide explains how to implement the backend for Google Pay integration usin
 In Backend Mode:
 
 - **Backend** makes all EveryPay API calls (keeps credentials secure)
-- **React Native SDK** only handles Google Pay UI
+- **React Native app** only handles Google Pay UI
 - **Security**: API credentials never leave your backend
 
 ## Architecture
 
 ```
-React Native App → Backend Server → EveryPay API
-                 ↓
-              Google Pay UI (SDK)
-                 ↓
-             Token → Backend → EveryPay
+1. Create Payment:
+   React Native App → Backend → EveryPay API
+                                  ↓
+                          (payment reference)
+                                  ↓
+   React Native App ← Backend ← EveryPay
+
+2. Show Google Pay:
+   React Native App → Google Pay UI
+                           ↓
+                      (user pays)
+                           ↓
+   React Native App ← Token
+
+3. Process Payment:
+   React Native App → Backend → EveryPay API
+      (with token)              (process token)
+                                  ↓
+   React Native App ← Backend ← Result
 ```
 
 ## Required Backend Endpoints
 
-Your backend needs to implement three endpoints:
+Your backend needs to implement two endpoints:
 
-### 1. Initialize Session: `POST /api/gpay/init`
+### 1. Create Payment: `POST /api/gpay/create-payment`
 
-Opens a Google Pay session with EveryPay.
-
-**Request Body:**
-
-```json
-{
-  "environment": "TEST",
-  "countryCode": "EE"
-}
-```
-
-**Backend Implementation:**
-
-```javascript
-// Node.js/Express example
-app.post('/api/gpay/init', async (req, res) => {
-  const { environment, countryCode } = req.body;
-
-  try {
-    // Call EveryPay API
-    const sessionResponse = await fetch(
-      `${EVERYPAY_API_URL}/api/v4/google_pay/open_session`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${Buffer.from(`${API_USERNAME}:${API_SECRET}`).toString('base64')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          api_username: API_USERNAME,
-          account_name: ACCOUNT_NAME,
-        }),
-      }
-    );
-
-    const sessionData = await sessionResponse.json();
-
-    // Return session info (no payment created yet)
-    res.json({
-      merchantId: sessionData.googlepay_merchant_identifier,
-      merchantName: sessionData.merchant_name,
-      gatewayId: sessionData.google_pay_gateway_id,
-      gatewayMerchantId: sessionData.googlepay_gateway_merchant_id,
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-```
-
-**Response:**
-
-```json
-{
-  "merchantId": "BCR2DN...",
-  "merchantName": "Your Merchant",
-  "gatewayId": "everypay",
-  "gatewayMerchantId": "your_gateway_id"
-}
-```
-
-### 2. Create Payment: `POST /api/gpay/create-payment`
-
-Creates a payment in EveryPay system.
+Opens a Google Pay session and creates a payment in EveryPay system (combines both `open_session` and `create_payment` API calls).
 
 **Request Body:**
 
@@ -193,7 +144,7 @@ app.post('/api/gpay/create-payment', async (req, res) => {
 }
 ```
 
-### 3. Process Token: `POST /api/gpay/process-payment`
+### 2. Process Token: `POST /api/gpay/process-token`
 
 Processes the Google Pay token received from the app.
 
@@ -217,7 +168,7 @@ Processes the Google Pay token received from the app.
 **Backend Implementation:**
 
 ```javascript
-app.post('/api/gpay/process-payment', async (req, res) => {
+app.post('/api/gpay/process-token', async (req, res) => {
   const {
     paymentReference,
     mobileAccessToken,
@@ -240,7 +191,7 @@ app.post('/api/gpay/process-payment', async (req, res) => {
         },
         body: JSON.stringify({
           payment_reference: paymentReference,
-          token_consent_agreed: tokenConsentAgreed,
+          token_consent_agreed: tokenConsentAgreed || false,
           signature: signature,
           intermediateSigningKey: intermediateSigningKey,
           protocolVersion: protocolVersion,
@@ -295,140 +246,6 @@ function generateNonce() {
 }
 ```
 
-## React Native Implementation
-
-With the backend endpoints in place, here's how to use them in your React Native app:
-
-```typescript
-import NativeEverypayGpayRnBridge from './specs/NativeEverypayGpayRnBridge';
-import type { EverypayConfig, GooglePayBackendData } from './types';
-
-// 1. Initialize when component mounts
-async function initializeGooglePay() {
-  const config: EverypayConfig = {
-    environment: 'TEST', // or 'PRODUCTION'
-    countryCode: 'EE',
-    currencyCode: 'EUR',
-    allowedCardNetworks: ['MASTERCARD', 'VISA'],
-    allowedCardAuthMethods: ['PAN_ONLY', 'CRYPTOGRAM_3DS'],
-  };
-
-  // Get init data from backend
-  const initData = await fetch('https://your-backend.com/api/gpay/init', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      environment: config.environment,
-      countryCode: config.countryCode,
-    }),
-  }).then((res) => res.json());
-
-  // Initialize SDK with backend data
-  const isReady = await NativeEverypayGpayRnBridge.initializeWithBackendData(
-    config,
-    initData
-  );
-
-  return isReady;
-}
-
-// 2. Make payment when button pressed
-async function makePayment() {
-  // Get payment data from backend
-  const paymentData: GooglePayBackendData = await fetch(
-    'https://your-backend.com/api/gpay/create-payment',
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        amount: 10.5,
-        label: 'Product Purchase',
-        orderReference: 'ORDER-123',
-        customerEmail: 'customer@example.com',
-        customerIp: '192.168.1.1',
-      }),
-    }
-  ).then((res) => res.json());
-
-  // Show Google Pay and get token
-  const tokenData =
-    await NativeEverypayGpayRnBridge.makePaymentWithBackendData(paymentData);
-
-  // Send token to backend for processing
-  const result = await fetch(
-    'https://your-backend.com/api/gpay/process-payment',
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(tokenData),
-    }
-  ).then((res) => res.json());
-
-  if (result.success) {
-    console.log('Payment successful!', result.paymentReference);
-  } else {
-    console.error('Payment failed:', result.error);
-  }
-}
-```
-
-## Security Best Practices
-
-1. **Never expose API credentials in the app**
-
-   - Store `API_USERNAME`, `API_SECRET` only on backend
-   - Never send them to the mobile app
-
-2. **Validate requests on backend**
-
-   - Verify user authentication before creating payments
-   - Validate amount, email, and other parameters
-   - Implement rate limiting
-
-3. **Use HTTPS**
-
-   - All backend endpoints must use HTTPS
-   - Never transmit sensitive data over HTTP
-
-4. **Session management**
-
-   - Consider caching session info (with expiration)
-   - Avoid unnecessary calls to open_session endpoint
-
-5. **Error handling**
-   - Don't expose internal errors to app
-   - Log errors securely on backend
-   - Return user-friendly error messages
-
-## Testing
-
-### Test with EveryPay Sandbox
-
-1. Use `environment: 'TEST'` in config
-2. Use EveryPay test API credentials
-3. Test card: See EveryPay documentation for test cards
-
-### Backend Testing
-
-Use tools like Postman or curl to test endpoints:
-
-```bash
-# Test init endpoint
-curl -X POST https://your-backend.com/api/gpay/init \
-  -H "Content-Type: application/json" \
-  -d '{"environment":"TEST","countryCode":"EE"}'
-
-# Test create payment endpoint
-curl -X POST https://your-backend.com/api/gpay/create-payment \
-  -H "Content-Type: application/json" \
-  -d '{
-    "amount": 10.50,
-    "label": "Test Product",
-    "orderReference": "TEST-123",
-    "customerEmail": "test@example.com"
-  }'
-```
-
 ## Troubleshooting
 
 ### "Payment reference required"
@@ -452,6 +269,5 @@ curl -X POST https://your-backend.com/api/gpay/create-payment \
 
 ## Additional Resources
 
-- [EveryPay API Documentation](https://support.everypay.com/)
+- [EveryPay API Documentation](https://support.every-pay.com/api-documentation/)
 - [Google Pay Android Integration](https://developers.google.com/pay/api/android/overview)
-- [Example Backend Implementation](./examples/backend-nodejs/)

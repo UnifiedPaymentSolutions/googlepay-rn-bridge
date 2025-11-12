@@ -135,25 +135,13 @@ export type GooglePayButtonType =
   | 'subscribe'; // "Subscribe with Google Pay"
 
 /**
- * Simplified props for GooglePayButton component
- * Uses single callback pattern for ease of use
+ * Common props for GooglePayButton (used in both modes)
  */
-export interface GooglePayButtonProps {
+type GooglePayButtonCommonProps = {
   // Configuration
   config: EverypayConfig;
 
-  // Payment data
-  amount: number;
-  label: string;
-  orderReference?: string;
-  customerEmail?: string;
-  customerIp?: string;
-
-  // Backend mode support (optional)
-  backendUrl?: string; // If provided, uses backend mode
-
   // Single callback for payment handling
-  // Works for both Backend and SDK modes
   onPressCallback: (paymentData: any) => Promise<any>;
 
   // Callbacks
@@ -165,37 +153,45 @@ export interface GooglePayButtonProps {
   theme?: 'dark' | 'light';
   buttonType?: GooglePayButtonType;
   disabled?: boolean;
-}
+};
 
 /**
- * Props for GooglePayButton with SDK support (DEPRECATED - use GooglePayButtonProps)
- * @deprecated Use simplified GooglePayButtonProps instead
+ * Backend Mode props
+ * API credentials stay on backend (recommended)
+ * backendData contains all payment info including amount and label
  */
-export interface GooglePayButtonSDKProps {
-  // Mode selection
-  mode: GooglePayMode;
+export type GooglePayButtonBackendProps = GooglePayButtonCommonProps & {
+  // Backend mode requires backendData from /create-payment endpoint
+  backendData: GooglePayBackendData;
 
-  // Backend mode props (required when mode='backend')
-  backendUrl?: string; // Base URL for backend API
-  onGetBackendInitData?: () => Promise<GooglePayBackendData>;
-  onGetBackendPaymentData?: (params: {
-    amount: number;
-    label: string;
-    orderReference?: string;
-  }) => Promise<GooglePayBackendData>;
-  onProcessToken?: (tokenData: GooglePayTokenData) => Promise<any>;
+  // These props are not needed in backend mode (use never to prevent passing them)
+  amount?: never;
+  label?: never;
+  orderReference?: never;
+  customerEmail?: never;
+  customerIp?: never;
+};
 
-  // SDK mode props (required when mode='sdk')
-  config?: EverypayConfig;
-  paymentData?: SDKModePaymentData;
+/**
+ * SDK Mode props
+ * API credentials stored in app, SDK handles all EveryPay API calls
+ */
+export type GooglePayButtonSDKProps = GooglePayButtonCommonProps & {
+  // SDK mode requires these fields for payment
+  amount: number;
+  label: string;
+  orderReference: string;
+  customerEmail: string;
+  customerIp?: string;
 
-  // Common props
-  onPaymentSuccess?: (result: any) => void;
-  onPaymentError?: (error: Error) => void;
-  onPaymentCanceled?: () => void;
+  // backendData is not needed in SDK mode (use never to prevent passing it)
+  backendData?: never;
+};
 
-  // Button styling
-  buttonTheme?: 'dark' | 'light';
-  buttonRadius?: number;
-  disabled?: boolean;
-}
+/**
+ * GooglePayButton props (discriminated union)
+ * Use either Backend Mode (with backendData) or SDK Mode (with payment details)
+ */
+export type GooglePayButtonProps =
+  | GooglePayButtonBackendProps
+  | GooglePayButtonSDKProps;

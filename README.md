@@ -21,43 +21,85 @@ yarn add @everypay/googlepay-rn-bridge
 
 ### Backend Mode (Recommended) ⭐
 
-Most secure approach - API credentials stay on your backend.
+Most secure approach - API credentials stay on your backend. You have full control over when and how API requests are made.
 
-**Step 1:** Implement backend endpoints ([see guide](./BACKEND_INTEGRATION.md))
+**Step 1:** Implement 2 backend endpoints ([see guide](./BACKEND_INTEGRATION.md))
+
+Your backend needs these endpoints:
+
+- **POST /api/gpay/create-payment** - Combines EveryPay `open_session` + `create_payment` API calls
+- **POST /api/gpay/process-token** - Calls EveryPay `payment_data` API to process the token
 
 **Step 2:** Use GooglePayButton component:
 
 ```typescript
+import React, { useState, useEffect } from 'react';
 import { GooglePayButton } from '@everypay/googlepay-rn-bridge';
-import type { EverypayConfig } from '@everypay/googlepay-rn-bridge';
+import type {
+  EverypayConfig,
+  GooglePayBackendData
+} from '@everypay/googlepay-rn-bridge';
 
 function PaymentScreen() {
+  const [backendData, setBackendData] = useState<GooglePayBackendData | null>(null);
+
   const config: EverypayConfig = {
     environment: 'TEST', // or 'PRODUCTION'
     countryCode: 'EE',
     currencyCode: 'EUR'
   };
 
-  const handlePayment = async (tokenData: any) => {
-    // Process token via your backend
-    const result = await fetch('https://your-backend.com/api/gpay/process-payment', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(tokenData)
-    });
-    return result.json();
+  // Fetch payment data when component mounts
+  useEffect(() => {
+    const fetchPaymentData = async () => {
+      try {
+        const response = await fetch('https://your-backend.com/api/gpay/create-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: 10.50,
+            label: 'Product Purchase',
+            orderReference: 'ORDER-123',
+            customerEmail: 'customer@example.com',
+          }),
+        });
+        const data = await response.json();
+        setBackendData(data);
+      } catch (error) {
+        console.error('Failed to prepare payment:', error);
+      }
+    };
+
+    fetchPaymentData();
+  }, []);
+
+  // Process the Google Pay token
+  const handlePaymentToken = async (tokenData: any) => {
+    try {
+      const result = await fetch('https://your-backend.com/api/gpay/process-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tokenData)
+      });
+      return result.json();
+    } catch (error) {
+      console.error('Failed to process token:', error);
+      throw error;
+    }
   };
+
+  // Show Google Pay button only when backend data is ready
+  if (!backendData) {
+    return null; // Or show a loading indicator
+  }
 
   return (
     <GooglePayButton
       config={config}
-      amount={10.50}
-      label="Product Purchase"
-      orderReference="ORDER-123"
-      customerEmail="customer@example.com"
-      backendUrl="https://your-backend.com/api/gpay"
-      onPressCallback={handlePayment}
-      onPaymentSuccess={(result) => console.log('Payment successful!', result)}
+      backendData={backendData}
+      onPressCallback={handlePaymentToken}
+      // Handle your back-end response here
+      onPaymentSuccess={(result) => result.state === 'failed' ? console.error('Error:', result) : console.log('Success!', result)}
       onPaymentError={(error) => console.error('Payment failed:', error)}
       onPaymentCanceled={() => console.log('Payment canceled')}
       theme="dark"
@@ -69,10 +111,10 @@ function PaymentScreen() {
 
 **How it works:**
 
-1. Component automatically calls your `backendUrl/init` endpoint to initialize
-2. On button press, it calls `backendUrl/create-payment` to create payment
-3. Shows Google Pay UI and retrieves token
-4. Calls your `onPressCallback` with the token data for processing
+1. Component mounts → **automatically fetches** payment data from your `/create-payment` endpoint (this should internally call both EveryPay `open_session` and `create_payment` APIs)
+2. When data arrives → Google Pay button appears (component initializes automatically)
+3. User presses Google Pay button → SDK shows Google Pay UI and retrieves token
+4. `onPressCallback` is called with the token → **you send** it to your `/process-token` endpoint
 5. Your backend processes the payment and returns the result
 
 **📖 Full Backend Setup Guide:** [BACKEND_INTEGRATION.md](./BACKEND_INTEGRATION.md)
@@ -81,7 +123,7 @@ function PaymentScreen() {
 
 ### SDK Mode
 
-API keys are stored in the app.
+API keys are stored in the app, no back-end service needed
 
 Use GooglePayButton with SDK configuration:
 
@@ -127,7 +169,7 @@ function PaymentScreen() {
 
 **How it works:**
 
-1. Component auto-detects SDK mode (no `backendUrl`, but has `apiUsername`)
+1. Component auto-detects SDK mode (no `sessionData`, but has `apiUsername` + `apiSecret`)
 2. Initializes SDK with your credentials
 3. On button press, shows Google Pay and processes payment via EveryPay API
 4. Calls your `onPressCallback` with the payment result
@@ -137,11 +179,11 @@ function PaymentScreen() {
 ### Component Features
 
 ✅ **Auto-mode detection** - Automatically uses Backend or SDK mode based on config
+✅ **User-controlled flow** - You decide when to fetch data and make API calls
 ✅ **Single callback** - Simple `onPressCallback` handles payment flow
 ✅ **Native button** - Official Google Pay button with multiple types
-✅ **Auto-initialization** - No manual init code needed
+✅ **Type-safe** - Pass typed data directly, full TypeScript support
 ✅ **Both architectures** - Works with old and new React Native architecture
-✅ **TypeScript** - Full type safety and autocomplete
 
 ## Requirements
 

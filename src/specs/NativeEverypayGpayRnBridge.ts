@@ -48,17 +48,23 @@ export interface PaymentData {
   customerIp?: string;
 }
 
+export interface GooglePayInitResult {
+  isReady: boolean;
+  gatewayId: string;
+  gatewayMerchantId: string;
+}
+
 export interface Spec extends TurboModule {
   // Initialize with backend data (Backend mode - RECOMMENDED)
   // Backend makes all API calls, SDK only handles Google Pay UI
   initializeWithBackendData(
     config: EverypayConfig,
     backendData: GooglePayBackendData
-  ): Promise<boolean>;
+  ): Promise<GooglePayInitResult>;
 
   // Initialize in SDK mode
   // SDK makes all API calls including backend calls
-  initializeSDKMode(config: EverypayConfig): Promise<boolean>;
+  initializeSDKMode(config: EverypayConfig): Promise<GooglePayInitResult>;
 
   // Make payment with backend data (Backend mode - RECOMMENDED)
   // Returns Google Pay token for backend to process
