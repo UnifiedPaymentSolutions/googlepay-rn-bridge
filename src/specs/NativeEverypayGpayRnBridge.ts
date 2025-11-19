@@ -40,6 +40,19 @@ export interface GooglePayTokenData {
   tokenConsentAgreed: boolean;
 }
 
+export interface TokenRequestResult extends GooglePayTokenData {
+  paymentDetails?: {
+    paymentReference: string;
+    paymentState: string;
+    ccDetails?: {
+      token?: string;
+      lastFourDigits?: string;
+      month?: string;
+      year?: string;
+    };
+  };
+}
+
 export interface PaymentData {
   amount: string;
   label: string;
@@ -75,6 +88,17 @@ export interface Spec extends TurboModule {
   // Make payment in SDK mode
   // SDK handles everything including backend communication
   makePaymentSDKMode(paymentData: PaymentData): Promise<{ status: string }>;
+
+  // Request token with backend data (Backend mode - RECOMMENDED)
+  // Returns Google Pay token for backend to process and retrieve MIT token
+  requestTokenWithBackendData(
+    backendData: GooglePayBackendData
+  ): Promise<GooglePayTokenData>;
+
+  // Request token in SDK mode
+  // SDK handles everything including MIT token retrieval
+  // Returns token data including MIT token in paymentDetails.ccDetails.token
+  requestTokenSDKMode(label: string): Promise<TokenRequestResult>;
 
   // Check if a payment is currently being processed
   isProcessingPayment(): boolean;

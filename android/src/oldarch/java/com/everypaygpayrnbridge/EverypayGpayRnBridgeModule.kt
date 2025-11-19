@@ -43,6 +43,16 @@ class EverypayGpayRnBridgeModule(reactContext: ReactApplicationContext) :
     implementation.makePaymentSDKMode(paymentData, promise)
   }
 
+  @ReactMethod
+  fun requestTokenWithBackendData(backendData: ReadableMap, promise: Promise) {
+    implementation.requestTokenWithBackendData(backendData, promise)
+  }
+
+  @ReactMethod
+  fun requestTokenSDKMode(label: String, promise: Promise) {
+    implementation.requestTokenSDKMode(label, promise)
+  }
+
   @ReactMethod(isBlockingSynchronousMethod = true)
   fun isProcessingPayment(): Boolean {
     return implementation.isProcessingPayment()

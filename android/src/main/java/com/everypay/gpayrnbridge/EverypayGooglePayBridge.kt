@@ -133,8 +133,8 @@ class EverypayGooglePayBridge(
                 when (result) {
                     is GooglePayReadinessResult.Success -> {
                         // Get gateway info from helper after initialization
-                        val gateway = helper!!.getGatewayId()
-                        val gatewayMerchant = helper!!.getGatewayMerchantId()
+                        val gateway = helper!!.gatewayId
+                        val gatewayMerchant = helper!!.gatewayMerchantId
 
                         // Store gateway info
                         gatewayId = gateway
@@ -281,6 +281,138 @@ class EverypayGooglePayBridge(
             }
         } catch (e: Exception) {
             promise.reject(Constants.E_PAYMENT_ERROR, e.message ?: "Payment failed", e)
+        }
+    }
+
+    /**
+     * Request token with backend data (Backend mode - RECOMMENDED)
+     * Returns Google Pay token for backend to process and retrieve MIT token
+     */
+    fun requestTokenWithBackendData(
+        backendDataMap: ReadableMap,
+        promise: Promise
+    ) {
+        if (helper == null) {
+            promise.reject(Constants.E_INIT_ERROR, "Not initialized. Call initializeWithBackendData first")
+            return
+        }
+
+        if (helper!!.isProcessingPayment()) {
+            promise.reject(Constants.E_PAYMENT_ERROR, "Operation already in progress")
+            return
+        }
+
+        try {
+            val backendData = parseBackendData(backendDataMap)
+
+            helper!!.requestTokenWithBackendData(backendData) { result ->
+                when (result) {
+                    is GooglePayResult.TokenReceived -> {
+                        // Convert token data to WritableMap
+                        val tokenMap = Arguments.createMap().apply {
+                            putString("paymentReference", result.tokenData.paymentReference)
+                            putString("mobileAccessToken", result.tokenData.mobileAccessToken)
+                            putString("signature", result.tokenData.signature)
+                            putMap("intermediateSigningKey", Arguments.createMap().apply {
+                                putString("signedKey", result.tokenData.intermediateSigningKey.signedKey)
+                                val signaturesArray = Arguments.createArray()
+                                result.tokenData.intermediateSigningKey.signatures.forEach {
+                                    signaturesArray.pushString(it)
+                                }
+                                putArray("signatures", signaturesArray)
+                            })
+                            putString("protocolVersion", result.tokenData.protocolVersion)
+                            putString("signedMessage", result.tokenData.signedMessage)
+                            putBoolean("tokenConsentAgreed", result.tokenData.tokenConsentAgreed)
+                        }
+                        promise.resolve(tokenMap)
+                    }
+                    is GooglePayResult.Canceled -> {
+                        promise.reject(Constants.E_PAYMENT_CANCELED, "Token request canceled by user")
+                    }
+                    is GooglePayResult.Error -> {
+                        promise.reject(result.code, result.message, result.exception)
+                    }
+                    else -> {
+                        promise.reject(Constants.E_PAYMENT_ERROR, "Unexpected result type")
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            promise.reject(Constants.E_PAYMENT_ERROR, e.message ?: "Token request failed", e)
+        }
+    }
+
+    /**
+     * Request token in SDK mode
+     * SDK handles everything including MIT token retrieval
+     * Returns token data including MIT token in paymentDetails.ccDetails.token
+     */
+    fun requestTokenSDKMode(
+        label: String,
+        promise: Promise
+    ) {
+        if (helper == null) {
+            promise.reject(Constants.E_INIT_ERROR, "Not initialized. Call initializeSDKMode first")
+            return
+        }
+
+        if (helper!!.isProcessingPayment()) {
+            promise.reject(Constants.E_PAYMENT_ERROR, "Operation already in progress")
+            return
+        }
+
+        try {
+            helper!!.requestToken(label) { result ->
+                when (result) {
+                    is GooglePayResult.TokenReceived -> {
+                        val tokenMap = Arguments.createMap().apply {
+                            putString("paymentReference", result.tokenData.paymentReference)
+                            putString("mobileAccessToken", result.tokenData.mobileAccessToken)
+                            putString("signature", result.tokenData.signature)
+                            putMap("intermediateSigningKey", Arguments.createMap().apply {
+                                putString("signedKey", result.tokenData.intermediateSigningKey.signedKey)
+                                val signaturesArray = Arguments.createArray()
+                                result.tokenData.intermediateSigningKey.signatures.forEach {
+                                    signaturesArray.pushString(it)
+                                }
+                                putArray("signatures", signaturesArray)
+                            })
+                            putString("protocolVersion", result.tokenData.protocolVersion)
+                            putString("signedMessage", result.tokenData.signedMessage)
+                            putBoolean("tokenConsentAgreed", result.tokenData.tokenConsentAgreed)
+
+                            // SDK mode specific: Include payment details with MIT token
+                            result.paymentDetails?.let { details ->
+                                putMap("paymentDetails", Arguments.createMap().apply {
+                                    putString("paymentReference", details.paymentReference)
+                                    putString("paymentState", details.paymentState)
+                                    details.ccDetails?.let { ccDetails ->
+                                        putMap("ccDetails", Arguments.createMap().apply {
+                                            ccDetails.token?.let { putString("token", it) }
+                                            ccDetails.lastFourDigits?.let { putString("lastFourDigits", it) }
+                                            ccDetails.month?.let { putString("month", it) }
+                                            ccDetails.year?.let { putString("year", it) }
+                                        })
+                                    }
+                                })
+                            }
+                        }
+                        promise.resolve(tokenMap)
+                    }
+                    is GooglePayResult.Canceled -> {
+                        promise.reject(Constants.E_PAYMENT_CANCELED, "Token request canceled by user")
+                    }
+                    is GooglePayResult.Error -> {
+                        promise.reject(result.code, result.message, result.exception)
+                    }
+                    else -> {
+                        promise.reject(Constants.E_PAYMENT_ERROR, "Unexpected result type")
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            promise.reject(Constants.E_PAYMENT_ERROR, e.message ?: "Token request failed", e)
         }
     }
 

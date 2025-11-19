@@ -10,6 +10,7 @@ import type {
   EverypayConfig,
   GooglePayBackendData,
   GooglePayTokenData,
+  TokenRequestResult,
   SDKModePaymentData,
 } from './types';
 
@@ -81,6 +82,54 @@ export const makePaymentSDKMode = (
 };
 
 /**
+ * Request recurring payment token with backend data (Backend mode - RECOMMENDED)
+ * Backend makes all API calls, SDK only handles Google Pay UI
+ *
+ * @param backendData - Backend data containing session info and zero-amount payment reference
+ * @returns Promise resolving to GooglePayTokenData to send to backend
+ *
+ * @example
+ * ```ts
+ * const tokenData = await requestTokenWithBackendData(backendData);
+ * // Send tokenData to backend for processing and MIT token extraction
+ * await fetch('/api/process-token', {
+ *   method: 'POST',
+ *   body: JSON.stringify(tokenData)
+ * });
+ * ```
+ */
+export const requestTokenWithBackendData = (
+  backendData: GooglePayBackendData
+): Promise<GooglePayTokenData> => {
+  ensureAndroid();
+  return NativeModule!.requestTokenWithBackendData(backendData);
+};
+
+/**
+ * Request recurring payment token in SDK mode
+ * SDK makes all API calls including backend communication and MIT token retrieval
+ *
+ * @param label - User-facing label shown in Google Pay sheet (e.g., "Card verification", "Save card for subscriptions")
+ * @returns Promise resolving to token data including MIT token in paymentDetails.ccDetails.token
+ *
+ * @example
+ * ```ts
+ * const result = await requestTokenSDKMode("Card verification");
+ * const mitToken = result.paymentDetails?.ccDetails?.token;
+ * // Store MIT token for future recurring payments
+ * if (mitToken) {
+ *   await saveMitToken(mitToken);
+ * }
+ * ```
+ */
+export const requestTokenSDKMode = (
+  label: string
+): Promise<TokenRequestResult> => {
+  ensureAndroid();
+  return NativeModule!.requestTokenSDKMode(label);
+};
+
+/**
  * Check if a payment is currently being processed
  */
 export const isProcessingPayment = (): boolean => {
@@ -94,6 +143,7 @@ export type {
   EverypayConfig,
   GooglePayBackendData,
   GooglePayTokenData,
+  TokenRequestResult,
   SDKModePaymentData,
   GooglePayMode,
   GooglePayButtonType,

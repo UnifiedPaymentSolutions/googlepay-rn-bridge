@@ -84,6 +84,30 @@ class EverypayGpayRnBridgeModuleImpl(private val reactApplicationContext: ReactA
   }
 
   /**
+   * Request token with backend data (Backend mode - RECOMMENDED)
+   * Returns Google Pay token for backend to process and retrieve MIT token
+   */
+  fun requestTokenWithBackendData(
+    backendData: ReadableMap,
+    promise: Promise
+  ) {
+    Log.d(NAME, "Requesting token with backend data (SDK)")
+    sdkBridge.requestTokenWithBackendData(backendData, promise)
+  }
+
+  /**
+   * Request token in SDK mode
+   * SDK handles everything including MIT token retrieval
+   */
+  fun requestTokenSDKMode(
+    label: String,
+    promise: Promise
+  ) {
+    Log.d(NAME, "Requesting token in SDK mode")
+    sdkBridge.requestTokenSDKMode(label, promise)
+  }
+
+  /**
    * Check if a payment is currently being processed
    */
   fun isProcessingPayment(): Boolean {

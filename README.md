@@ -6,6 +6,7 @@ EveryPay Google Pay React Native Bridge (Android Only). Built on [EveryPay Googl
 - 📦 **SDK Integration**: Built on EveryPay Android SDK for better maintainability
 - 🛡️ **Enhanced Security**: API credentials never exposed in mobile app
 - 🎯 **Dual Mode Support**: Backend Mode (recommended) + SDK Mode
+- 🔄 **Recurring Payments**: Request MIT tokens for recurring payments
 
 ## Installation
 
@@ -259,6 +260,9 @@ interface EverypayConfig {
   currencyCode?: string; // Default: 'EUR'
   allowedCardNetworks?: ('MASTERCARD' | 'VISA')[];
   allowedCardAuthMethods?: ('PAN_ONLY' | 'CRYPTOGRAM_3DS')[];
+
+  // Token request mode
+  requestToken?: boolean; // If true, request MIT token instead of making payment
 }
 ```
 
@@ -315,6 +319,11 @@ initializeWithBackendData(
 makePaymentWithBackendData(
   backendData: GooglePayBackendData
 ): Promise<GooglePayTokenData>
+
+// Request MIT token with backend data (recurring payments)
+requestTokenWithBackendData(
+  backendData: GooglePayBackendData
+): Promise<GooglePayTokenData>
 ```
 
 #### SDK Mode Methods
@@ -331,6 +340,9 @@ makePaymentSDKMode(paymentData: {
   customerEmail: string;
   customerIp?: string;
 }): Promise<{ status: string }>
+
+// Request MIT token SDK mode (recurring payments)
+requestTokenSDKMode(label: string): Promise<TokenRequestResult>
 ```
 
 #### Utility Methods
@@ -354,6 +366,7 @@ isProcessingPayment(): boolean
 ## Documentation
 
 - 📖 [Backend Integration Guide](./BACKEND_INTEGRATION.md) - How to implement backend endpoints
+- 📖 [Recurring Payments Guide](./RECURRING_PAYMENTS.md) - Token requests for MIT and recurring payments
 - 📖 [TypeScript Types](./src/types.ts) - Full type definitions
 
 ## Mode Comparison

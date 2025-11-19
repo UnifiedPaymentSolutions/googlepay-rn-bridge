@@ -160,39 +160,72 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = (props) => {
     try {
       let paymentData: any;
 
+      // Check if this is a token request (recurring payments) or payment
+      const isTokenRequest = config.requestToken === true;
+
       if (isBackendMode) {
         // Backend mode flow
-        // User provides backend data (already fetched from /create-payment endpoint)
         const backendData = (props as any).backendData;
 
-        // Step 1: Show Google Pay and get token
-        const tokenData =
-          await NativeEverypayGpayRnBridge.makePaymentWithBackendData(
-            backendData
-          );
+        if (isTokenRequest) {
+          // Token request: Request MIT token for recurring payments
+          const tokenData =
+            await NativeEverypayGpayRnBridge.requestTokenWithBackendData(
+              backendData
+            );
 
-        // Step 2: Call user callback with token data
-        // User sends this to their backend /process-token endpoint
-        paymentData = await onPressCallback(tokenData);
+          // Call user callback with token data
+          paymentData = await onPressCallback(tokenData);
+        } else {
+          // Payment: Process one-time payment
+          // Step 1: Show Google Pay and get token
+          const tokenData =
+            await NativeEverypayGpayRnBridge.makePaymentWithBackendData(
+              backendData
+            );
+
+          // Step 2: Call user callback with token data
+          // User sends this to their backend /process-token endpoint
+          paymentData = await onPressCallback(tokenData);
+        }
       } else if (isSDKMode) {
         // SDK mode flow
-        const { amount, label, orderReference, customerEmail, customerIp } =
-          props as any;
+        if (isTokenRequest) {
+          // Token request: Request MIT token for recurring payments
+          const tokenLabel = (props as any).tokenLabel || 'Card verification';
 
-        const sdkPaymentData: SDKModePaymentData = {
-          amount: amount.toString(),
-          label,
-          orderReference,
-          customerEmail,
-          customerIp,
-        };
+          // Validate tokenLabel is provided
+          if (!(props as any).tokenLabel) {
+            console.warn(
+              '[GooglePayButton] tokenLabel not provided for SDK mode token request, using default "Card verification"'
+            );
+          }
 
-        // Show Google Pay and process payment via SDK
-        const result =
-          await NativeEverypayGpayRnBridge.makePaymentSDKMode(sdkPaymentData);
+          const tokenResult =
+            await NativeEverypayGpayRnBridge.requestTokenSDKMode(tokenLabel);
 
-        // Call user callback with result
-        paymentData = await onPressCallback(result);
+          // Call user callback with token result
+          paymentData = await onPressCallback(tokenResult);
+        } else {
+          // Payment: Process one-time payment via SDK
+          const { amount, label, orderReference, customerEmail, customerIp } =
+            props as any;
+
+          const sdkPaymentData: SDKModePaymentData = {
+            amount: amount.toString(),
+            label,
+            orderReference,
+            customerEmail,
+            customerIp,
+          };
+
+          // Show Google Pay and process payment via SDK
+          const result =
+            await NativeEverypayGpayRnBridge.makePaymentSDKMode(sdkPaymentData);
+
+          // Call user callback with result
+          paymentData = await onPressCallback(result);
+        }
       }
 
       onPaymentSuccess?.(paymentData);

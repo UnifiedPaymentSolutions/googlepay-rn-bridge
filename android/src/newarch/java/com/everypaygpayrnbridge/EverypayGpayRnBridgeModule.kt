@@ -38,6 +38,14 @@ class EverypayGpayRnBridgeModule(reactContext: ReactApplicationContext) :
     implementation.makePaymentSDKMode(paymentData, promise)
   }
 
+  override fun requestTokenWithBackendData(backendData: ReadableMap, promise: Promise) {
+    implementation.requestTokenWithBackendData(backendData, promise)
+  }
+
+  override fun requestTokenSDKMode(label: String, promise: Promise) {
+    implementation.requestTokenSDKMode(label, promise)
+  }
+
   override fun isProcessingPayment(): Boolean {
     return implementation.isProcessingPayment()
   }

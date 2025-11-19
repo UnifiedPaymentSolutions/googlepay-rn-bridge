@@ -70,6 +70,8 @@ export interface EverypayConfig {
   currencyCode?: string;
   allowedCardNetworks?: CardNetwork[];
   allowedCardAuthMethods?: CardAuthMethod[];
+  // Token request mode
+  requestToken?: boolean; // If true, request MIT token instead of making payment
 }
 
 /**
@@ -107,6 +109,23 @@ export interface GooglePayTokenData {
 }
 
 /**
+ * Token request result from SDK mode
+ * Extends GooglePayTokenData with payment details containing MIT token
+ */
+export interface TokenRequestResult extends GooglePayTokenData {
+  paymentDetails?: {
+    paymentReference: string;
+    paymentState: string;
+    ccDetails?: {
+      token?: string; // MIT token (24-char alphanumeric)
+      lastFourDigits?: string; // Last 4 digits of card
+      month?: string; // Expiration month
+      year?: string; // Expiration year (YYYY)
+    };
+  };
+}
+
+/**
  * Payment data for SDK mode
  */
 export interface SDKModePaymentData {
@@ -141,13 +160,23 @@ type GooglePayButtonCommonProps = {
   // Configuration
   config: EverypayConfig;
 
-  // Single callback for payment handling
+  /**
+   * Callback for handling payment/token data
+   * Receives different types based on mode and operation:
+   * - Backend + payment: GooglePayTokenData
+   * - Backend + token request: GooglePayTokenData
+   * - SDK + payment: GooglePayPaymentResult
+   * - SDK + token request: TokenRequestResult
+   */
   onPressCallback: (paymentData: any) => Promise<any>;
 
   // Callbacks
   onPaymentSuccess?: (result: any) => void;
   onPaymentError?: (error: Error) => void;
   onPaymentCanceled?: () => void;
+
+  // Token request label (required for SDK mode when requestToken is true)
+  tokenLabel?: string;
 
   // Button styling
   theme?: 'dark' | 'light';
