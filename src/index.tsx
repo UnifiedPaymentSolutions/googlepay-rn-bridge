@@ -13,6 +13,7 @@ import type {
   TokenRequestResult,
   SDKModePaymentData,
 } from './types';
+import type { GooglePayInitResult } from './specs/NativeEverypayGpayRnBridge';
 
 // Conditionally import native module (Android only)
 const NativeModule =
@@ -45,7 +46,7 @@ export { default as GooglePayButton } from './GooglePayButton';
 export const initializeWithBackendData = (
   config: EverypayConfig,
   backendData: GooglePayBackendData
-): Promise<boolean> => {
+): Promise<GooglePayInitResult> => {
   ensureAndroid();
   return NativeModule!.initializeWithBackendData(config, backendData);
 };
@@ -54,7 +55,9 @@ export const initializeWithBackendData = (
  * Initialize Google Pay in SDK mode
  * SDK makes all API calls including backend calls
  */
-export const initializeSDKMode = (config: EverypayConfig): Promise<boolean> => {
+export const initializeSDKMode = (
+  config: EverypayConfig
+): Promise<GooglePayInitResult> => {
   ensureAndroid();
   return NativeModule!.initializeSDKMode(config);
 };
@@ -155,6 +158,9 @@ export type {
   CardNetwork,
   CardAuthMethod,
 } from './types';
+
+// Export types from native spec
+export type { GooglePayInitResult } from './specs/NativeEverypayGpayRnBridge';
 
 // Export constants
 export { EstonianDefaults, GooglePayErrorCodes } from './types';

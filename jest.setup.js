@@ -1,27 +1,28 @@
 /* global jest, beforeEach, afterEach */
 // Jest setup file for React Native testing
 
-// Mock react-native-uuid
-jest.mock('react-native-uuid', () => ({
-  v4: jest.fn(() => 'mock-uuid-123'),
-}));
-
-// Mock react-native
-jest.mock('react-native', () => {
-  const RN = jest.requireActual('react-native');
+// Mock the native module
+jest.mock('./src/specs/NativeEverypayGpayRnBridge', () => {
+  const mockInstance =
+    require('./src/__tests__/__mocks__/NativeEverypayGpayRnBridge').__mockInstance;
   return {
-    ...RN,
-    requireNativeComponent: jest.fn(() => 'MockedNativeComponent'),
-    Platform: {
-      OS: 'android',
-      select: jest.fn((obj) => obj.android || obj.default),
-    },
-    StyleSheet: {
-      create: jest.fn((styles) => styles),
-    },
-    TouchableOpacity: 'TouchableOpacity',
+    __esModule: true,
+    default: mockInstance,
   };
 });
+
+// Override Platform.OS to always be android
+jest.mock('react-native/Libraries/Utilities/Platform', () => ({
+  __esModule: true,
+  default: {
+    OS: 'android',
+    Version: 29,
+    select: (obj) => obj.android || obj.default,
+  },
+  OS: 'android',
+  Version: 29,
+  select: (obj) => obj.android || obj.default,
+}));
 
 // Mock fetch globally
 global.fetch = jest.fn();
@@ -45,6 +46,11 @@ beforeEach(() => {
   if (global.fetch) {
     global.fetch.mockClear();
   }
+  // Reset native module mock
+  const {
+    __mockInstance,
+  } = require('./src/__tests__/__mocks__/NativeEverypayGpayRnBridge');
+  __mockInstance.resetMocks();
 });
 
 afterEach(() => {

@@ -93,6 +93,11 @@
       "<rootDir>/example/node_modules",
       "<rootDir>/lib/"
     ],
+    "testPathIgnorePatterns": [
+      "<rootDir>/node_modules/",
+      "<rootDir>/lib/",
+      "<rootDir>/src/__tests__/__mocks__/"
+    ],
     "testEnvironment": "node",
     "transformIgnorePatterns": [
       "node_modules/(?!(react-native|@react-native)/)"
