@@ -1,6 +1,5 @@
-import React, { useEffect, useState /* , useMemo */ } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  // NativeModules,
   requireNativeComponent,
   TouchableOpacity,
   StyleSheet,
@@ -25,11 +24,22 @@ import {
 import { EveryPayGooglePayError } from './everyPayError';
 import { ERROR_CODES } from './constants';
 
-// @ts-ignore
-const isFabricEnabled = global.nativeFabricUIManager != null;
-const NativeGooglePayButton = isFabricEnabled
-  ? require('./specs/GooglePayButtonNativeComponent').default
-  : requireNativeComponent('EveryPayGooglePayButton');
+// Only require the native component on Android
+const NativeGooglePayButton =
+  Platform.OS === 'android'
+    ? (() => {
+        try {
+          // @ts-ignore
+          const isFabricEnabled = global.nativeFabricUIManager != null;
+          return isFabricEnabled
+            ? require('./specs/GooglePayButtonNativeComponent').default
+            : requireNativeComponent('EveryPayGooglePayButton');
+        } catch (error) {
+          console.warn('Native Google Pay component not available:', error);
+          return null;
+        }
+      })()
+    : null;
 
 interface GooglePayButtonProps {
   onPressCallback?: (result: PaymentProcessResponse) => void;
@@ -55,12 +65,19 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({
   customerIp,
 }) => {
   const [isReady, setIsReady] = useState<boolean | null>(null);
+  const [isMakingPaymentRequest, setIsMakingPaymentRequest] =
+    useState<boolean>(false);
   const [EPSessionInfo, setEPSessionInfo] =
     useState<OpenEPSessionResponse | null>(null);
 
   const initGooglePay = async () => {
     if (Platform.OS === 'ios') {
       console.log('GooglePayButton is not supported on iOS');
+      return;
+    }
+
+    if (!NativeGooglePayButton) {
+      console.warn('Google Pay native component is not available');
       return;
     }
 
@@ -140,6 +157,7 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({
   };
 
   const onPress = async () => {
+    setIsMakingPaymentRequest(true);
     let merchantInfo: GetMerchantInfoResponse | null = null;
 
     try {
@@ -166,6 +184,7 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({
         body
       );
     } catch (error: any) {
+      setIsMakingPaymentRequest(false);
       console.error('Error making merchant info request', error);
       onPressCallback?.({
         state: 'failed',
@@ -182,6 +201,7 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({
 
     if (!EPSessionInfo) {
       console.log('EPSessionInfo is not set');
+      setIsMakingPaymentRequest(false);
       return;
     }
 
@@ -268,6 +288,8 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({
         onPressCallback?.({ state: 'failed', error: e });
         console.error('GooglePayButton error', e);
       }
+    } finally {
+      setIsMakingPaymentRequest(false);
     }
   };
 
@@ -279,9 +301,13 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = ({
     <TouchableOpacity
       testID="google-pay-button"
       onPress={onPress}
-      disabled={disabled}
+      disabled={disabled || isMakingPaymentRequest}
       // activeOpacity={disabled ? 0.3 : 1}
-      style={[disabled ? styles.disabled : styles.notDisabled]}
+      style={[
+        disabled || isMakingPaymentRequest
+          ? styles.disabled
+          : styles.notDisabled,
+      ]}
     >
       <NativeGooglePayButton
         testID="native-google-pay-button"

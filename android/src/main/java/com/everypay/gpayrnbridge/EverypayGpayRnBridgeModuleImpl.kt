@@ -41,7 +41,7 @@ class EverypayGpayRnBridgeModuleImpl(private val reactApplicationContext: ReactA
       // Add the event listener which manages responses from the Google Pay API.
       reactApplicationContext.addActivityEventListener(object : BaseActivityEventListener() {
         override fun onActivityResult(
-          activity: Activity?,
+          activity: Activity,
           requestCode: Int,
           resultCode: Int,
           data: Intent?

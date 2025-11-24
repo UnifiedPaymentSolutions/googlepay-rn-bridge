@@ -46,6 +46,7 @@ class EverypayGpayRnBridgeModule(reactContext: ReactApplicationContext) :
    */
   @ReactMethod
   fun loadPaymentData(request: ReadableMap, promise: Promise) {
+    val currentActivity = reactApplicationContext.currentActivity
     implementation.loadPaymentData(request, promise, currentActivity)
   }
 }

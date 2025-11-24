@@ -44,6 +44,7 @@ class EverypayGpayRnBridgeModule(reactContext: ReactApplicationContext) :
    * @param promise returned to the caller.
    */
   override fun loadPaymentData(request: ReadableMap, promise: Promise) {
+    val currentActivity = reactApplicationContext.currentActivity
     implementation.loadPaymentData(request, promise, currentActivity)
   }
 }
