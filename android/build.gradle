@@ -72,13 +72,6 @@ repositories {
   google()
 }
 
-// Define repositories for all subprojects including SDK
-allprojects {
-  repositories {
-    mavenCentral()
-    google()
-  }
-}
 
 def kotlin_version = getExtOrDefault("kotlinVersion")
 
@@ -96,7 +89,7 @@ dependencies {
   implementation "com.google.android.gms:play-services-wallet:19.4.0"
 
   // EveryPay Google Pay SDK
-  implementation project(':everypay-gpay-sdk')
+  implementation "com.every-pay:gpay:0.2.0"
 }
 
 if (isNewArchitectureEnabled()) {
