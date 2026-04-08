@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.AttributeSet
 import android.util.Log
 import android.view.View
+import android.view.View.MeasureSpec
 import android.widget.FrameLayout
 import com.facebook.react.uimanager.PixelUtil
 import com.google.android.gms.common.ConnectionResult
@@ -31,6 +32,7 @@ class GooglePayButtonView: FrameLayout {
   var theme = ButtonConstants.ButtonTheme.DARK
   var cornerRadius = 10
   private var button: View? = null
+  private var appliedConfig: String? = null
 
   fun addButton() {
     if (!isGooglePlayServicesAvailable()) {
@@ -38,11 +40,31 @@ class GooglePayButtonView: FrameLayout {
       return
     }
 
+    val currentConfig = "$allowedPaymentMethods|$buttonType|$theme|$cornerRadius"
+    if (button != null && currentConfig == appliedConfig) {
+      return
+    }
+
     if (button != null) {
       removeView(button)
     }
     button = initializeGooglePayButton()
-    addView(button)
+    addView(button, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+    viewTreeObserver.addOnGlobalLayoutListener { requestLayout() }
+    appliedConfig = currentConfig
+  }
+
+  override fun requestLayout() {
+    super.requestLayout()
+    post(mLayoutRunnable)
+  }
+
+  private val mLayoutRunnable = Runnable {
+    measure(
+      MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
+      MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY)
+    )
+    layout(left, top, right, bottom)
   }
 
   private fun isGooglePlayServicesAvailable(): Boolean {
