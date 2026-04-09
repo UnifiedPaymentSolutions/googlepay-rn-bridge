@@ -49,8 +49,15 @@ class GooglePayButtonView: FrameLayout {
       removeView(button)
     }
     button = initializeGooglePayButton()
-    addView(button, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+    addView(button)
     viewTreeObserver.addOnGlobalLayoutListener { requestLayout() }
+    // PayButton fetches card data (last 4 digits) asynchronously from Google servers.
+    // Schedule delayed layout refreshes to display it once it arrives.
+    postDelayed({ requestLayout() }, 500)
+    postDelayed({ requestLayout() }, 1500)
+    postDelayed({ requestLayout() }, 2500)
+    postDelayed({ requestLayout() }, 3500)
+    postDelayed({ requestLayout() }, 4500)
     appliedConfig = currentConfig
   }
 
@@ -60,11 +67,13 @@ class GooglePayButtonView: FrameLayout {
   }
 
   private val mLayoutRunnable = Runnable {
-    measure(
-      MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
-      MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY)
-    )
-    layout(left, top, right, bottom)
+    if (width > 0 && height > 0) {
+      measure(
+        MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
+        MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY)
+      )
+      layout(left, top, right, bottom)
+    }
   }
 
   private fun isGooglePlayServicesAvailable(): Boolean {
