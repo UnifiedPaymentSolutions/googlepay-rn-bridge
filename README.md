@@ -8,6 +8,8 @@ EveryPay Google Pay React Native Bridge (Android Only). Built on [EveryPay Googl
 - 🎯 **Dual Mode Support**: Backend Mode (recommended) + SDK Mode
 - 🔄 **Recurring Payments**: Request MIT tokens for recurring payments
 
+> **Upgrading from v1.x?** See the [Migration Guide](./MIGRATION.md) for all breaking changes and step-by-step instructions.
+
 ## Installation
 
 ```sh
@@ -179,12 +181,12 @@ function PaymentScreen() {
 
 ### Component Features
 
-✅ **Auto-mode detection** - Automatically uses Backend or SDK mode based on config
-✅ **User-controlled flow** - You decide when to fetch data and make API calls
-✅ **Single callback** - Simple `onPressCallback` handles payment flow
-✅ **Native button** - Official Google Pay button with multiple types
-✅ **Type-safe** - Pass typed data directly, full TypeScript support
-✅ **Both architectures** - Works with old and new React Native architecture
+- ✅ **Auto-mode detection** - Automatically uses Backend or SDK mode based on config
+- ✅ **User-controlled flow** - You decide when to fetch data and make API calls
+- ✅ **Single callback** - Simple `onPressCallback` handles payment flow
+- ✅ **Native button** - Official Google Pay button with multiple types
+- ✅ **Type-safe** - Pass typed data directly, full TypeScript support
+- ✅ **Both architectures** - Works with old and new React Native architecture
 
 ## Requirements
 
@@ -352,6 +354,20 @@ requestTokenSDKMode(label: string): Promise<TokenRequestResult>
 isProcessingPayment(): boolean
 ```
 
+### Button Types
+
+The `buttonType` prop controls the label shown on the Google Pay button (see [Google Pay Brand Guidelines](https://developers.google.com/pay/api/android/guides/brand-guidelines) for visual examples):
+
+| Value | Button Label |
+|---|---|
+| `buy` | "Buy with Google Pay" (default) |
+| `book` | "Book with Google Pay" |
+| `checkout` | "Checkout with Google Pay" |
+| `donate` | "Donate with Google Pay" |
+| `order` | "Order with Google Pay" |
+| `pay` | "Google Pay" |
+| `subscribe` | "Subscribe with Google Pay" |
+
 ### Error Codes
 
 | Code                                         | Description                          |
@@ -365,6 +381,7 @@ isProcessingPayment(): boolean
 
 ## Documentation
 
+- 📖 [Migration Guide](./MIGRATION.md) - Migrating from v1.x to v2.0 (SDK migration)
 - 📖 [Backend Integration Guide](./BACKEND_INTEGRATION.md) - How to implement backend endpoints
 - 📖 [Recurring Payments Guide](./RECURRING_PAYMENTS.md) - Token requests for MIT and recurring payments
 - 📖 [TypeScript Types](./src/types.ts) - Full type definitions
