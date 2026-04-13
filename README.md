@@ -172,7 +172,7 @@ function PaymentScreen() {
 
 **How it works:**
 
-1. Component auto-detects SDK mode (no `sessionData`, but has `apiUsername` + `apiSecret`)
+1. Component auto-detects SDK mode (no `backendData` prop provided, uses `apiUsername` + `apiSecret` from config)
 2. Initializes SDK with your credentials
 3. On button press, shows Google Pay and processes payment via EveryPay API
 4. Calls your `onPressCallback` with the payment result
@@ -306,6 +306,18 @@ interface GooglePayTokenData {
 }
 ```
 
+#### GooglePayInitResult
+
+Result returned by the initialization methods:
+
+```typescript
+interface GooglePayInitResult {
+  isReady: boolean;           // Whether Google Pay is available on the device
+  gatewayId: string;          // Payment gateway identifier
+  gatewayMerchantId: string;  // Gateway-specific merchant identifier
+}
+```
+
 ### Native Methods
 
 #### Backend Mode Methods
@@ -315,7 +327,7 @@ interface GooglePayTokenData {
 initializeWithBackendData(
   config: EverypayConfig,
   backendData: GooglePayBackendData
-): Promise<boolean>
+): Promise<GooglePayInitResult>
 
 // Make payment with backend data
 makePaymentWithBackendData(
@@ -332,7 +344,7 @@ requestTokenWithBackendData(
 
 ```typescript
 // Initialize SDK mode
-initializeSDKMode(config: EverypayConfig): Promise<boolean>
+initializeSDKMode(config: EverypayConfig): Promise<GooglePayInitResult>
 
 // Make payment SDK mode
 makePaymentSDKMode(paymentData: {

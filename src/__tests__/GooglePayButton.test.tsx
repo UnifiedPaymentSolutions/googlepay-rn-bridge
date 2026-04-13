@@ -96,6 +96,11 @@ describe('GooglePayButton', () => {
 
   describe('Mode detection', () => {
     it('should detect Backend mode when backendData is provided', async () => {
+      const backendSpy = jest.spyOn(
+        __mockInstance,
+        'initializeWithBackendData'
+      );
+      const sdkSpy = jest.spyOn(__mockInstance, 'initializeSDKMode');
       const mockOnPress = jest.fn();
 
       render(
@@ -107,12 +112,17 @@ describe('GooglePayButton', () => {
       );
 
       await waitFor(() => {
-        // Verify it's rendered (which means initialization succeeded)
-        expect(__mockInstance.resetMocks).toBeDefined();
+        expect(backendSpy).toHaveBeenCalledWith(mockConfig, mockBackendData);
       });
+      expect(sdkSpy).not.toHaveBeenCalled();
     });
 
     it('should detect SDK mode when backendData is not provided', async () => {
+      const backendSpy = jest.spyOn(
+        __mockInstance,
+        'initializeWithBackendData'
+      );
+      const sdkSpy = jest.spyOn(__mockInstance, 'initializeSDKMode');
       const mockOnPress = jest.fn();
 
       const sdkConfig: EverypayConfig = {
@@ -133,9 +143,9 @@ describe('GooglePayButton', () => {
       render(<GooglePayButton {...sdkProps} />);
 
       await waitFor(() => {
-        // Check that initialization was called
-        expect(__mockInstance.resetMocks).toBeDefined();
+        expect(sdkSpy).toHaveBeenCalledWith(sdkConfig);
       });
+      expect(backendSpy).not.toHaveBeenCalled();
     });
   });
 
@@ -373,10 +383,6 @@ describe('GooglePayButton', () => {
 
       const sdkProps: GooglePayButtonSDKProps = {
         config: sdkConfig,
-        amount: 0.0,
-        label: 'Card verification',
-        orderReference: 'token-123',
-        customerEmail: 'test@example.com',
         tokenLabel: 'Card verification',
         onPressCallback: mockOnPress,
         onPaymentSuccess: mockOnSuccess,

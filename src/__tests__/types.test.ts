@@ -8,7 +8,7 @@ import { EstonianDefaults, GooglePayErrorCodes } from '../types';
 describe('Types and Constants', () => {
   describe('EstonianDefaults', () => {
     it('should have correct country code', () => {
-      expect(EstonianDefaults.COUNTRY_CODE).toBe('ET');
+      expect(EstonianDefaults.COUNTRY_CODE).toBe('EE');
     });
 
     it('should have correct currency code', () => {
@@ -157,14 +157,6 @@ describe('Types and Constants', () => {
       expect(types).toContain('order');
       expect(types).toContain('pay');
       expect(types).toContain('subscribe');
-    });
-
-    it('should validate GooglePayMode type accepts backend and sdk', () => {
-      const modes: Array<'backend' | 'sdk'> = ['backend', 'sdk'];
-
-      expect(modes).toHaveLength(2);
-      expect(modes).toContain('backend');
-      expect(modes).toContain('sdk');
     });
   });
 });

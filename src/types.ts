@@ -42,7 +42,7 @@ export enum GooglePayErrorCodes {
  * Estonian market specific configuration defaults
  */
 export const EstonianDefaults = {
-  COUNTRY_CODE: 'ET',
+  COUNTRY_CODE: 'EE',
   CURRENCY_CODE: 'EUR',
   ALLOWED_CARD_NETWORKS: ['VISA', 'MASTERCARD'] as CardNetwork[],
   ALLOWED_AUTH_METHODS: ['CRYPTOGRAM_3DS'] as CardAuthMethod[], // Recommended for security
@@ -137,11 +137,6 @@ export interface SDKModePaymentData {
 }
 
 /**
- * Operation modes for Google Pay integration
- */
-export type GooglePayMode = 'backend' | 'sdk';
-
-/**
  * Google Pay button types (matching SDK button types)
  */
 export type GooglePayButtonType =
@@ -154,7 +149,7 @@ export type GooglePayButtonType =
   | 'subscribe'; // "Subscribe with Google Pay"
 
 /**
- * Common props for GooglePayButton (used in both modes)
+ * Common props for GooglePayButton (used in all variants)
  */
 type GooglePayButtonCommonProps = {
   // Configuration
@@ -165,7 +160,7 @@ type GooglePayButtonCommonProps = {
    * Receives different types based on mode and operation:
    * - Backend + payment: GooglePayTokenData
    * - Backend + token request: GooglePayTokenData
-   * - SDK + payment: GooglePayPaymentResult
+   * - SDK + payment: { status: string }
    * - SDK + token request: TokenRequestResult
    */
   onPressCallback: (paymentData: any) => Promise<any>;
@@ -174,9 +169,6 @@ type GooglePayButtonCommonProps = {
   onPaymentSuccess?: (result: any) => void;
   onPaymentError?: (error: Error) => void;
   onPaymentCanceled?: () => void;
-
-  // Token request label (required for SDK mode when requestToken is true)
-  tokenLabel?: string;
 
   // Button styling
   theme?: 'dark' | 'light';
@@ -193,19 +185,20 @@ export type GooglePayButtonBackendProps = GooglePayButtonCommonProps & {
   // Backend mode requires backendData from /create-payment endpoint
   backendData: GooglePayBackendData;
 
-  // These props are not needed in backend mode (use never to prevent passing them)
+  // These props are not allowed in backend mode
   amount?: never;
   label?: never;
   orderReference?: never;
   customerEmail?: never;
   customerIp?: never;
+  tokenLabel?: never;
 };
 
 /**
- * SDK Mode props
- * API credentials stored in app, SDK handles all EveryPay API calls
+ * SDK Mode props for a one-time payment
+ * Set `config.requestToken` to false (or omit) and provide payment details
  */
-export type GooglePayButtonSDKProps = GooglePayButtonCommonProps & {
+export type GooglePayButtonSDKPaymentProps = GooglePayButtonCommonProps & {
   // SDK mode requires these fields for payment
   amount: number;
   label: string;
@@ -213,13 +206,38 @@ export type GooglePayButtonSDKProps = GooglePayButtonCommonProps & {
   customerEmail: string;
   customerIp?: string;
 
-  // backendData is not needed in SDK mode (use never to prevent passing it)
+  // These props are not allowed in SDK payment mode
+  backendData?: never;
+  tokenLabel?: never;
+};
+
+/**
+ * SDK Mode props for a token request (recurring payments)
+ * Set `config.requestToken` to true and provide a tokenLabel
+ */
+export type GooglePayButtonSDKTokenProps = GooglePayButtonCommonProps & {
+  // SDK mode token request requires tokenLabel
+  tokenLabel: string;
+
+  // Payment fields are not used when requesting a token
+  amount?: never;
+  label?: never;
+  orderReference?: never;
+  customerEmail?: never;
+  customerIp?: never;
   backendData?: never;
 };
 
 /**
+ * SDK Mode props (discriminated union of payment and token-request variants)
+ */
+export type GooglePayButtonSDKProps =
+  | GooglePayButtonSDKPaymentProps
+  | GooglePayButtonSDKTokenProps;
+
+/**
  * GooglePayButton props (discriminated union)
- * Use either Backend Mode (with backendData) or SDK Mode (with payment details)
+ * Use Backend Mode (with backendData) or SDK Mode (payment or token request)
  */
 export type GooglePayButtonProps =
   | GooglePayButtonBackendProps

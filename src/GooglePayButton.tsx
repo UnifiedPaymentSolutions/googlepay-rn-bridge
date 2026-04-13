@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   requireNativeComponent,
   TouchableOpacity,
@@ -6,8 +6,30 @@ import {
   Platform,
 } from 'react-native';
 
-import NativeEverypayGpayRnBridge from './specs/NativeEverypayGpayRnBridge';
 import type { GooglePayButtonProps, SDKModePaymentData } from './types';
+
+// Shape of the allowedPaymentMethods entry the native Google Pay button expects.
+type AllowedPaymentMethod = {
+  type: 'CARD';
+  parameters: {
+    allowedCardNetworks: string[];
+    allowedAuthMethods: string[];
+  };
+  tokenizationSpecification: {
+    type: 'PAYMENT_GATEWAY';
+    parameters: {
+      gateway: string;
+      gatewayMerchantId: string;
+    };
+  };
+};
+
+// Only require the native module on Android — importing it on iOS would trigger
+// TurboModuleRegistry.getEnforcing at module load time and throw.
+const NativeEverypayGpayRnBridge =
+  Platform.OS === 'android'
+    ? require('./specs/NativeEverypayGpayRnBridge').default
+    : null;
 
 // Only require the native component on Android
 const NativeGooglePayButton =
@@ -49,7 +71,6 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = (props) => {
   // Determine mode based on which props are present
   const isBackendMode =
     'backendData' in props && props.backendData !== undefined;
-  const isSDKMode = !isBackendMode;
 
   useEffect(() => {
     let isMounted = true;
@@ -84,7 +105,7 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = (props) => {
               gatewayMerchantId: initResult.gatewayMerchantId,
             });
           }
-        } else if (isSDKMode) {
+        } else {
           // SDK mode: Direct SDK initialization
           const initResult =
             await NativeEverypayGpayRnBridge.initializeSDKMode(config);
@@ -98,10 +119,6 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = (props) => {
               gatewayMerchantId: initResult.gatewayMerchantId,
             });
           }
-        } else {
-          throw new Error(
-            'Invalid configuration: provide either backendData (Backend mode) or apiUsername/apiSecret (SDK mode)'
-          );
         }
       } catch (error: any) {
         console.error('Error initializing Google Pay', error);
@@ -119,42 +136,51 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = (props) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const getAllowedPaymentMethods = () => {
-    // For native button rendering
+  // Serialized allowedPaymentMethods for the native button. Only recomputed
+  // when card network/auth method config or gatewayInfo actually changes —
+  // keeps the native prop reference stable across unrelated re-renders.
+  const allowedPaymentMethodsJson = useMemo(() => {
+    if (!gatewayInfo) {
+      return null;
+    }
+
     const cardNetworks = config?.allowedCardNetworks || ['MASTERCARD', 'VISA'];
     const authMethods = config?.allowedCardAuthMethods || [
       'PAN_ONLY',
       'CRYPTOGRAM_3DS',
     ];
 
-    const paymentMethod: any = {
+    const paymentMethod: AllowedPaymentMethod = {
       type: 'CARD',
       parameters: {
         allowedCardNetworks: cardNetworks,
         allowedAuthMethods: authMethods,
       },
-    };
-
-    // Add tokenizationSpecification if gateway info is available
-    // This is required for Google Pay to display card digits
-    if (gatewayInfo && gatewayInfo.gateway && gatewayInfo.gatewayMerchantId) {
-      paymentMethod.tokenizationSpecification = {
+      tokenizationSpecification: {
         type: 'PAYMENT_GATEWAY',
         parameters: {
           gateway: gatewayInfo.gateway,
           gatewayMerchantId: gatewayInfo.gatewayMerchantId,
         },
-      };
-    } else {
-      console.warn(
-        '[GooglePayButton] Gateway info not available, button may not display card digits'
-      );
-    }
+      },
+    };
 
-    return [paymentMethod];
-  };
+    return JSON.stringify([paymentMethod]);
+  }, [
+    config?.allowedCardNetworks,
+    config?.allowedCardAuthMethods,
+    gatewayInfo,
+  ]);
 
   const onPress = async () => {
+    // Defensive guard: mirrors the check in initGooglePay. The render guards
+    // (isReady + gatewayInfo) normally prevent this handler from running
+    // without a native module, but guarding here avoids a null-deref crash
+    // if state is ever externally manipulated (e.g. in tests).
+    if (!NativeEverypayGpayRnBridge) {
+      return;
+    }
+
     setIsMakingPaymentRequest(true);
 
     try {
@@ -188,7 +214,7 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = (props) => {
           // User sends this to their backend /process-token endpoint
           paymentData = await onPressCallback(tokenData);
         }
-      } else if (isSDKMode) {
+      } else {
         // SDK mode flow
         if (isTokenRequest) {
           // Token request: Request MIT token for recurring payments
@@ -259,7 +285,7 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = (props) => {
     >
       <NativeGooglePayButton
         testID="native-google-pay-button"
-        allowedPaymentMethods={JSON.stringify(getAllowedPaymentMethods())}
+        allowedPaymentMethods={allowedPaymentMethodsJson}
         theme={theme.toLowerCase()}
         buttonType={buttonType.toLowerCase()}
         style={styles.nativeButtonStyle}

@@ -148,10 +148,12 @@ export type {
   GooglePayTokenData,
   TokenRequestResult,
   SDKModePaymentData,
-  GooglePayMode,
   GooglePayButtonType,
   GooglePayButtonProps,
+  GooglePayButtonBackendProps,
   GooglePayButtonSDKProps,
+  GooglePayButtonSDKPaymentProps,
+  GooglePayButtonSDKTokenProps,
 
   // Base types
   GooglePayEnvironment,
