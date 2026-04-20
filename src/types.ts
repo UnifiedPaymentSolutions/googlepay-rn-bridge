@@ -171,6 +171,7 @@ type GooglePayButtonCommonProps = {
   onPaymentCanceled?: () => void;
 
   // Button styling
+  style?: import('react-native').StyleProp<import('react-native').ViewStyle>;
   theme?: 'dark' | 'light';
   buttonType?: GooglePayButtonType;
   disabled?: boolean;

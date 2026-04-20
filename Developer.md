@@ -1,12 +1,14 @@
 ## Development Setup
 
 ### Prerequisites
+
 - Node.js 20+ (check .nvmrc file)
 - Yarn 3.6.1+
 - Android Studio (for Android development)
 - React Native development environment
 
 ### Installation
+
 ```sh
 yarn install
 ```
@@ -54,6 +56,7 @@ yarn start --reset-cache
 ```
 
 ## Formatting
+
 ```sh
 yarn format
 ```
@@ -61,6 +64,7 @@ yarn format
 ## Building with Android artifacts
 
 This is usually not needed as Android build step calls this Gradle script itself too
+
 ```sh
 yarn prepare && cd android && ./gradlew generateCodegenArtifactsFromSchema && cd ..
 ```

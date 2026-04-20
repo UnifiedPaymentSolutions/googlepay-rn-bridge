@@ -107,6 +107,7 @@ function PaymentScreen() {
       onPaymentCanceled={() => console.log('Payment canceled')}
       theme="dark"
       buttonType="buy"  // Options: buy, book, checkout, donate, order, pay, subscribe
+      style={{ marginHorizontal: 16 }}
     />
   );
 }
@@ -165,6 +166,7 @@ function PaymentScreen() {
       onPaymentError={(error) => console.error('Error:', error)}
       theme="dark"
       buttonType="buy"
+      style={{ marginHorizontal: 16 }}
     />
   );
 }
@@ -185,6 +187,7 @@ function PaymentScreen() {
 - ✅ **User-controlled flow** - You decide when to fetch data and make API calls
 - ✅ **Single callback** - Simple `onPressCallback` handles payment flow
 - ✅ **Native button** - Official Google Pay button with multiple types
+- ✅ **Customizable sizing** - Pass a `style` prop to control button dimensions and spacing
 - ✅ **Type-safe** - Pass typed data directly, full TypeScript support
 - ✅ **Both architectures** - Works with old and new React Native architecture
 
@@ -312,9 +315,9 @@ Result returned by the initialization methods:
 
 ```typescript
 interface GooglePayInitResult {
-  isReady: boolean;           // Whether Google Pay is available on the device
-  gatewayId: string;          // Payment gateway identifier
-  gatewayMerchantId: string;  // Gateway-specific merchant identifier
+  isReady: boolean; // Whether Google Pay is available on the device
+  gatewayId: string; // Payment gateway identifier
+  gatewayMerchantId: string; // Gateway-specific merchant identifier
 }
 ```
 
@@ -366,19 +369,34 @@ requestTokenSDKMode(label: string): Promise<TokenRequestResult>
 isProcessingPayment(): boolean
 ```
 
+### Button Styling
+
+The button defaults to `alignSelf: 'stretch'` (fills parent width) and `height: 48`. Pass a `style` prop to override:
+
+```typescript
+<GooglePayButton
+  config={config}
+  backendData={backendData}
+  onPressCallback={handlePaymentToken}
+  style={{ height: 56, marginHorizontal: 16 }}
+/>
+```
+
+Ensure the button follows [Google Pay Brand Guidelines](https://developers.google.com/pay/api/android/guides/brand-guidelines#payment-buttons) — proper size, color contrast, and clear space.
+
 ### Button Types
 
 The `buttonType` prop controls the label shown on the Google Pay button (see [Google Pay Brand Guidelines](https://developers.google.com/pay/api/android/guides/brand-guidelines) for visual examples):
 
-| Value | Button Label |
-|---|---|
-| `buy` | "Buy with Google Pay" (default) |
-| `book` | "Book with Google Pay" |
-| `checkout` | "Checkout with Google Pay" |
-| `donate` | "Donate with Google Pay" |
-| `order` | "Order with Google Pay" |
-| `pay` | "Google Pay" |
-| `subscribe` | "Subscribe with Google Pay" |
+| Value       | Button Label                    |
+| ----------- | ------------------------------- |
+| `buy`       | "Buy with Google Pay" (default) |
+| `book`      | "Book with Google Pay"          |
+| `checkout`  | "Checkout with Google Pay"      |
+| `donate`    | "Donate with Google Pay"        |
+| `order`     | "Order with Google Pay"         |
+| `pay`       | "Google Pay"                    |
+| `subscribe` | "Subscribe with Google Pay"     |
 
 ### Error Codes
 

@@ -55,6 +55,7 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = (props) => {
     onPaymentSuccess,
     onPaymentError,
     onPaymentCanceled,
+    style,
     theme = 'dark',
     buttonType = 'buy',
     disabled = false,
@@ -278,9 +279,11 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = (props) => {
       onPress={onPress}
       disabled={disabled || isMakingPaymentRequest}
       style={[
+        styles.wrapper,
         disabled || isMakingPaymentRequest
           ? styles.disabled
           : styles.notDisabled,
+        style,
       ]}
     >
       <NativeGooglePayButton
@@ -288,22 +291,25 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = (props) => {
         allowedPaymentMethods={allowedPaymentMethodsJson}
         theme={theme.toLowerCase()}
         buttonType={buttonType.toLowerCase()}
-        style={styles.nativeButtonStyle}
+        style={styles.nativeButton}
       />
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
+  wrapper: {
+    alignSelf: 'stretch',
+    height: 48,
+  },
   disabled: {
     opacity: 0.4,
   },
   notDisabled: {
     opacity: 1,
   },
-  nativeButtonStyle: {
-    height: 100,
-    width: 300,
+  nativeButton: {
+    flex: 1,
   },
 });
 

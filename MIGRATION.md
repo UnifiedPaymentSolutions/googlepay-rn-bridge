@@ -13,13 +13,13 @@ The old version made EveryPay API calls (session, merchant info, payment process
 
 ## Breaking Changes at a Glance
 
-| Area | Old | New |
-|---|---|---|
-| Native methods | `init()`, `isReadyToPay()`, `loadPaymentData()` | `initializeWithBackendData()`, `initializeSDKMode()`, `makePaymentWithBackendData()`, `makePaymentSDKMode()`, `requestTokenWithBackendData()`, `requestTokenSDKMode()`, `isProcessingPayment()` |
-| Config type | `GooglePayButtonConfig` | `EverypayConfig` |
-| Button props | Flat props with `onPressCallback` returning `PaymentProcessResponse` | Discriminated union (`backendData` or `amount`/`label`/etc.), `onPressCallback` returns `Promise` |
-| Error handling | `onPressCallback({ state: 'failed', error })` | Separate `onPaymentError` and `onPaymentCanceled` callbacks |
-| Error class | `EveryPayGooglePayError` (exported) | Removed -- errors are standard `Error` objects with a `code` property |
+| Area           | Old                                                                  | New                                                                                                                                                                                             |
+| -------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Native methods | `init()`, `isReadyToPay()`, `loadPaymentData()`                      | `initializeWithBackendData()`, `initializeSDKMode()`, `makePaymentWithBackendData()`, `makePaymentSDKMode()`, `requestTokenWithBackendData()`, `requestTokenSDKMode()`, `isProcessingPayment()` |
+| Config type    | `GooglePayButtonConfig`                                              | `EverypayConfig`                                                                                                                                                                                |
+| Button props   | Flat props with `onPressCallback` returning `PaymentProcessResponse` | Discriminated union (`backendData` or `amount`/`label`/etc.), `onPressCallback` returns `Promise`                                                                                               |
+| Error handling | `onPressCallback({ state: 'failed', error })`                        | Separate `onPaymentError` and `onPaymentCanceled` callbacks                                                                                                                                     |
+| Error class    | `EveryPayGooglePayError` (exported)                                  | Removed -- errors are standard `Error` objects with a `code` property                                                                                                                           |
 
 ## Step-by-Step Migration
 
@@ -28,7 +28,12 @@ The old version made EveryPay API calls (session, merchant info, payment process
 **Old:**
 
 ```typescript
-import { GooglePayButton, init, isReadyToPay, loadPaymentData } from '@everypay/googlepay-rn-bridge';
+import {
+  GooglePayButton,
+  init,
+  isReadyToPay,
+  loadPaymentData,
+} from '@everypay/googlepay-rn-bridge';
 import type {
   GooglePayButtonConfig,
   EveryPayGooglePayError,
@@ -42,10 +47,10 @@ import type {
 import { GooglePayButton } from '@everypay/googlepay-rn-bridge';
 import type {
   EverypayConfig,
-  GooglePayBackendData,    // Backend mode
-  GooglePayTokenData,      // Payment result
-  TokenRequestResult,      // Token request result (recurring)
-  SDKModePaymentData,      // SDK mode
+  GooglePayBackendData, // Backend mode
+  GooglePayTokenData, // Payment result
+  TokenRequestResult, // Token request result (recurring)
+  SDKModePaymentData, // SDK mode
 } from '@everypay/googlepay-rn-bridge';
 ```
 
@@ -104,7 +109,7 @@ This is the biggest change. Instead of passing API credentials to the component,
 ```tsx
 <GooglePayButton
   config={config}
-  amount={10.50}
+  amount={10.5}
   label="Product Purchase"
   orderReference="ORDER-123"
   customerEmail="customer@example.com"
@@ -123,20 +128,22 @@ This is the biggest change. Instead of passing API credentials to the component,
 
 ```tsx
 // 1. Fetch payment data from your backend before rendering
-const [backendData, setBackendData] = useState<GooglePayBackendData | null>(null);
+const [backendData, setBackendData] = useState<GooglePayBackendData | null>(
+  null
+);
 
 useEffect(() => {
   fetch('https://your-backend.com/api/gpay/create-payment', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      amount: 10.50,
+      amount: 10.5,
       label: 'Product Purchase',
       orderReference: 'ORDER-123',
       customerEmail: 'customer@example.com',
     }),
   })
-    .then(res => res.json())
+    .then((res) => res.json())
     .then(setBackendData);
 }, []);
 
@@ -148,11 +155,14 @@ if (!backendData) return null;
   backendData={backendData}
   onPressCallback={async (tokenData) => {
     // Send token to your backend for processing
-    const result = await fetch('https://your-backend.com/api/gpay/process-token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(tokenData),
-    });
+    const result = await fetch(
+      'https://your-backend.com/api/gpay/process-token',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tokenData),
+      }
+    );
     return result.json();
   }}
   onPaymentSuccess={(result) => console.log('Success:', result)}
@@ -160,7 +170,7 @@ if (!backendData) return null;
   onPaymentCanceled={() => console.log('Canceled')}
   theme="dark"
   buttonType="buy"
-/>
+/>;
 ```
 
 See [BACKEND_INTEGRATION.md](./BACKEND_INTEGRATION.md) for the backend endpoint implementation guide.
@@ -172,7 +182,7 @@ If you want to keep API credentials in the app (not recommended), migration is s
 ```tsx
 <GooglePayButton
   config={config}
-  amount={10.50}
+  amount={10.5}
   label="Product Purchase"
   orderReference="ORDER-123"
   customerEmail="customer@example.com"
@@ -189,6 +199,7 @@ If you want to keep API credentials in the app (not recommended), migration is s
 ```
 
 Key differences:
+
 - `onPressCallback` must be `async` / return a `Promise`
 - Error handling moved to `onPaymentError` and `onPaymentCanceled`
 - New optional `buttonType` prop (default: `'buy'`)
@@ -200,7 +211,11 @@ If you were calling native methods directly (not through the button), these have
 **Old:**
 
 ```typescript
-import { init, isReadyToPay, loadPaymentData } from '@everypay/googlepay-rn-bridge';
+import {
+  init,
+  isReadyToPay,
+  loadPaymentData,
+} from '@everypay/googlepay-rn-bridge';
 
 await init('TEST', ['VISA', 'MASTERCARD'], ['PAN_ONLY', 'CRYPTOGRAM_3DS']);
 const ready = await isReadyToPay();
@@ -242,15 +257,15 @@ const result = await makePaymentSDKMode({
 
 ## Type Migration Reference
 
-| Old Type | New Type | Notes |
-|---|---|---|
-| `GooglePayButtonConfig` | `EverypayConfig` | Restructured, `customerUrl` added for SDK mode |
-| `PaymentProcessResponse` | -- | Removed. Use `onPaymentSuccess`/`onPaymentError` callbacks |
-| `EveryPayGooglePayError` | -- | Removed. Errors are standard `Error` with `code` property |
-| -- | `GooglePayBackendData` | New. Data from your backend |
-| -- | `TokenRequestResult` | New. Recurring payment token result |
-| -- | `GooglePayButtonProps` | New. Discriminated union for button props |
-| -- | `GooglePayInitResult` | New. Initialization result |
+| Old Type                 | New Type               | Notes                                                      |
+| ------------------------ | ---------------------- | ---------------------------------------------------------- |
+| `GooglePayButtonConfig`  | `EverypayConfig`       | Restructured, `customerUrl` added for SDK mode             |
+| `PaymentProcessResponse` | --                     | Removed. Use `onPaymentSuccess`/`onPaymentError` callbacks |
+| `EveryPayGooglePayError` | --                     | Removed. Errors are standard `Error` with `code` property  |
+| --                       | `GooglePayBackendData` | New. Data from your backend                                |
+| --                       | `TokenRequestResult`   | New. Recurring payment token result                        |
+| --                       | `GooglePayButtonProps` | New. Discriminated union for button props                  |
+| --                       | `GooglePayInitResult`  | New. Initialization result                                 |
 
 ## New Features in v2.0
 
