@@ -33,4 +33,8 @@ object GooglePayButtonManagerImpl {
       else -> ButtonConstants.ButtonType.BUY // default
     }
   }
+
+  fun setCornerRadius(view: GooglePayButtonView, cornerRadius: Int) {
+    view.cornerRadius = cornerRadius
+  }
 }

@@ -45,6 +45,11 @@ class GooglePayButtonManager(context: ReactApplicationContext) : SimpleViewManag
     GooglePayButtonManagerImpl.setButtonType(view, buttonType)
   }
 
+  @ReactProp(name = "cornerRadius", defaultInt = 100)
+  override fun setCornerRadius(view: GooglePayButtonView, cornerRadius: Int) {
+    GooglePayButtonManagerImpl.setCornerRadius(view, cornerRadius)
+  }
+
   override fun getExportedCustomBubblingEventTypeConstants(): Map<String, Any> {
     return mapOf(
       "onPress" to mapOf(

@@ -30,7 +30,7 @@ class GooglePayButtonView: FrameLayout {
   var allowedPaymentMethods: String? = null
   var buttonType = ButtonConstants.ButtonType.BUY
   var theme = ButtonConstants.ButtonTheme.DARK
-  var cornerRadius = 10
+  var cornerRadius = 100
   private var button: View? = null
   private var appliedConfig: String? = null
 

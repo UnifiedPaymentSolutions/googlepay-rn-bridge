@@ -56,6 +56,7 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = (props) => {
     onPaymentError,
     onPaymentCanceled,
     style,
+    cornerRadius = 100,
     theme = 'dark',
     buttonType = 'buy',
     disabled = false,
@@ -289,6 +290,7 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = (props) => {
       <NativeGooglePayButton
         testID="native-google-pay-button"
         allowedPaymentMethods={allowedPaymentMethodsJson}
+        cornerRadius={cornerRadius}
         theme={theme.toLowerCase()}
         buttonType={buttonType.toLowerCase()}
         style={styles.nativeButton}

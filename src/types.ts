@@ -172,6 +172,7 @@ type GooglePayButtonCommonProps = {
 
   // Button styling
   style?: import('react-native').StyleProp<import('react-native').ViewStyle>;
+  cornerRadius?: number;
   theme?: 'dark' | 'light';
   buttonType?: GooglePayButtonType;
   disabled?: boolean;
