@@ -590,4 +590,127 @@ describe('GooglePayButton', () => {
       });
     });
   });
+
+  describe('Custom styles', () => {
+    it('should forward default cornerRadius to the native button', async () => {
+      const { getByTestId } = render(
+        <GooglePayButton
+          config={mockConfig}
+          backendData={mockBackendData}
+          onPressCallback={jest.fn()}
+        />
+      );
+
+      await waitFor(() => {
+        const nativeButton = getByTestId('native-google-pay-button');
+        expect(nativeButton.props.cornerRadius).toBe(100);
+      });
+    });
+
+    it('should forward a custom cornerRadius to the native button', async () => {
+      const { getByTestId } = render(
+        <GooglePayButton
+          config={mockConfig}
+          backendData={mockBackendData}
+          onPressCallback={jest.fn()}
+          cornerRadius={24}
+        />
+      );
+
+      await waitFor(() => {
+        const nativeButton = getByTestId('native-google-pay-button');
+        expect(nativeButton.props.cornerRadius).toBe(24);
+      });
+    });
+
+    it('should merge a caller-supplied style onto the wrapper', async () => {
+      const { getByTestId } = render(
+        <GooglePayButton
+          config={mockConfig}
+          backendData={mockBackendData}
+          onPressCallback={jest.fn()}
+          style={{ marginHorizontal: 16, opacity: 0.9 }}
+        />
+      );
+
+      await waitFor(() => {
+        const wrapper = getByTestId('google-pay-button');
+        expect(wrapper.props.style).toEqual(
+          expect.objectContaining({ marginHorizontal: 16, opacity: 0.9 })
+        );
+      });
+    });
+
+    it('should warn when style overrides height', async () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      render(
+        <GooglePayButton
+          config={mockConfig}
+          backendData={mockBackendData}
+          onPressCallback={jest.fn()}
+          style={{ height: 200 }}
+        />
+      );
+
+      await waitFor(() => {
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining('style overrides height/minHeight/maxHeight')
+        );
+      });
+
+      warnSpy.mockRestore();
+    });
+
+    it.each([['minHeight'], ['maxHeight']])(
+      'should warn when style overrides %s',
+      async (key) => {
+        const warnSpy = jest
+          .spyOn(console, 'warn')
+          .mockImplementation(() => {});
+
+        render(
+          <GooglePayButton
+            config={mockConfig}
+            backendData={mockBackendData}
+            onPressCallback={jest.fn()}
+            style={{ [key]: 120 }}
+          />
+        );
+
+        await waitFor(() => {
+          expect(warnSpy).toHaveBeenCalledWith(
+            expect.stringContaining(
+              'style overrides height/minHeight/maxHeight'
+            )
+          );
+        });
+
+        warnSpy.mockRestore();
+      }
+    );
+
+    it('should not warn when style uses only safe properties', async () => {
+      const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const { getByTestId } = render(
+        <GooglePayButton
+          config={mockConfig}
+          backendData={mockBackendData}
+          onPressCallback={jest.fn()}
+          style={{ marginHorizontal: 16, opacity: 0.8 }}
+        />
+      );
+
+      await waitFor(() => {
+        expect(getByTestId('google-pay-button')).toBeTruthy();
+      });
+
+      expect(warnSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining('style overrides height/minHeight/maxHeight')
+      );
+
+      warnSpy.mockRestore();
+    });
+  });
 });

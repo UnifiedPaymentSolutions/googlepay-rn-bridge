@@ -378,9 +378,22 @@ The button defaults to `alignSelf: 'stretch'` (fills parent width) and `height: 
   config={config}
   backendData={backendData}
   onPressCallback={handlePaymentToken}
-  style={{ height: 56, marginHorizontal: 16 }}
+  style={{ marginHorizontal: 16 }}
+  cornerRadius={24}
 />
 ```
+
+**Which style properties are safe to override:**
+
+| Property                           | Safe? | Notes                                                |
+| ---------------------------------- | ----- | ---------------------------------------------------- |
+| `margin*`, `padding*`              | ✅    | Affect outer layout only.                            |
+| `alignSelf`, `opacity`             | ✅    | Visual only.                                         |
+| `backgroundColor`                  | ✅    | Hidden behind the native button.                     |
+| `height`, `minHeight`, `maxHeight` | ⚠️    | See below.                                           |
+| `borderRadius`                     | ❌    | Has no effect — use the `cornerRadius` prop instead. |
+
+**Height overrides require care.** The native Google Pay button fetches card artwork (last 4 digits, network logo) asynchronously from Google servers and measures itself against the mounted height. Changing height after mount does not reliably re-layout the native view, so the button can end up with distorted artwork or empty space. If you need a non-default height, set it once at mount and verify on-device; the component will log a warning to help you notice the override.
 
 Ensure the button follows [Google Pay Brand Guidelines](https://developers.google.com/pay/api/android/guides/brand-guidelines#payment-buttons) — proper size, color contrast, and clear space.
 

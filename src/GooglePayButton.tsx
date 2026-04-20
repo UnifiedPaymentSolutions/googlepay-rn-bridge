@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   requireNativeComponent,
   TouchableOpacity,
@@ -74,6 +74,22 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = (props) => {
   const isBackendMode =
     'backendData' in props && props.backendData !== undefined;
 
+  const flatStyle = StyleSheet.flatten(style) as
+    | { height?: unknown; minHeight?: unknown; maxHeight?: unknown }
+    | undefined;
+  const hasHeightOverride =
+    flatStyle?.height != null ||
+    flatStyle?.minHeight != null ||
+    flatStyle?.maxHeight != null;
+
+  useEffect(() => {
+    if (hasHeightOverride) {
+      console.warn(
+        '[GooglePayButton] style overrides height/minHeight/maxHeight. The native Google Pay button does not re-layout reliably when the parent height changes — use the `cornerRadius` prop for shape tweaks and verify any height override on-device. See README > Button Styling.'
+      );
+    }
+  }, [hasHeightOverride]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -137,42 +153,6 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = (props) => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Serialized allowedPaymentMethods for the native button. Only recomputed
-  // when card network/auth method config or gatewayInfo actually changes —
-  // keeps the native prop reference stable across unrelated re-renders.
-  const allowedPaymentMethodsJson = useMemo(() => {
-    if (!gatewayInfo) {
-      return null;
-    }
-
-    const cardNetworks = config?.allowedCardNetworks || ['MASTERCARD', 'VISA'];
-    const authMethods = config?.allowedCardAuthMethods || [
-      'PAN_ONLY',
-      'CRYPTOGRAM_3DS',
-    ];
-
-    const paymentMethod: AllowedPaymentMethod = {
-      type: 'CARD',
-      parameters: {
-        allowedCardNetworks: cardNetworks,
-        allowedAuthMethods: authMethods,
-      },
-      tokenizationSpecification: {
-        type: 'PAYMENT_GATEWAY',
-        parameters: {
-          gateway: gatewayInfo.gateway,
-          gatewayMerchantId: gatewayInfo.gatewayMerchantId,
-        },
-      },
-    };
-
-    return JSON.stringify([paymentMethod]);
-  }, [
-    config?.allowedCardNetworks,
-    config?.allowedCardAuthMethods,
-    gatewayInfo,
-  ]);
 
   const onPress = async () => {
     // Defensive guard: mirrors the check in initGooglePay. The render guards
@@ -274,6 +254,27 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = (props) => {
     return null;
   }
 
+  const paymentMethod: AllowedPaymentMethod = {
+    type: 'CARD',
+    parameters: {
+      allowedCardNetworks: config?.allowedCardNetworks || [
+        'MASTERCARD',
+        'VISA',
+      ],
+      allowedAuthMethods: config?.allowedCardAuthMethods || [
+        'PAN_ONLY',
+        'CRYPTOGRAM_3DS',
+      ],
+    },
+    tokenizationSpecification: {
+      type: 'PAYMENT_GATEWAY',
+      parameters: {
+        gateway: gatewayInfo.gateway,
+        gatewayMerchantId: gatewayInfo.gatewayMerchantId,
+      },
+    },
+  };
+
   return (
     <TouchableOpacity
       testID="google-pay-button"
@@ -289,7 +290,7 @@ const GooglePayButton: React.FC<GooglePayButtonProps> = (props) => {
     >
       <NativeGooglePayButton
         testID="native-google-pay-button"
-        allowedPaymentMethods={allowedPaymentMethodsJson}
+        allowedPaymentMethods={JSON.stringify([paymentMethod])}
         cornerRadius={cornerRadius}
         theme={theme.toLowerCase()}
         buttonType={buttonType.toLowerCase()}
