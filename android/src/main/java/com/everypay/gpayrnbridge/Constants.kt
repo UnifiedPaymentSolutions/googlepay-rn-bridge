@@ -70,6 +70,7 @@ object Constants {
    * Error codes
    */
 
+  const val E_ACTIVITY_DOES_NOT_EXIST = "E_ACTIVITY_DOES_NOT_EXIST"
   const val E_INIT_ERROR = "INIT_ERROR"
   const val E_PAYMENT_CANCELED = "E_PAYMENT_CANCELED"
   const val E_PAYMENT_ERROR = "E_PAYMENT_ERROR"

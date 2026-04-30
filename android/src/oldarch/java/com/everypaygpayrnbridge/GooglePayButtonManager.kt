@@ -1,4 +1,4 @@
-package java.com.everypaygpayrnbridge
+package com.everypaygpayrnbridge
 
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.uimanager.SimpleViewManager
@@ -26,6 +26,16 @@ class GooglePayButtonManager(var context: ReactApplicationContext) : SimpleViewM
   @ReactProp(name = "theme")
   fun setTheme(view: GooglePayButtonView, theme: String?) {
     GooglePayButtonManagerImpl.setTheme(view, theme)
+  }
+
+  @ReactProp(name = "buttonType")
+  fun setButtonType(view: GooglePayButtonView, buttonType: String?) {
+    GooglePayButtonManagerImpl.setButtonType(view, buttonType)
+  }
+
+  @ReactProp(name = "cornerRadius", defaultInt = 100)
+  fun setCornerRadius(view: GooglePayButtonView, cornerRadius: Int) {
+    GooglePayButtonManagerImpl.setCornerRadius(view, cornerRadius)
   }
 
   override fun getExportedCustomBubblingEventTypeConstants(): Map<String, Any> {

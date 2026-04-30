@@ -39,179 +39,208 @@ export enum GooglePayErrorCodes {
 }
 
 /**
- * Google Pay specific error interface
- */
-export interface GooglePayError extends Error {
-  code: GooglePayErrorCodes | string;
-  message: string;
-  details?: any;
-}
-
-/**
- * Address information for shipping/billing
- */
-export interface Address {
-  name: string;
-  address1: string;
-  address2?: string;
-  locality: string; // City (e.g., 'Tallinn')
-  administrativeArea: string; // County (e.g., 'Harju County')
-  countryCode: string; // 'ET' for Estonia
-  postalCode: string; // Estonian postal code (5 digits)
-  phoneNumber?: string;
-}
-
-/**
- * Merchant information
- */
-export interface MerchantInfo {
-  merchantId: string;
-  merchantName: string;
-}
-
-/**
- * Tokenization specification for payment gateway
- */
-export interface TokenizationSpecification {
-  type: 'PAYMENT_GATEWAY';
-  parameters: {
-    gateway: string;
-    gatewayMerchantId: string;
-  };
-}
-
-/**
- * Payment method configuration
- */
-export interface PaymentMethod {
-  type: 'CARD';
-  parameters: {
-    allowedCardNetworks: CardNetwork[];
-    allowedAuthMethods: CardAuthMethod[];
-  };
-  tokenizationSpecification: TokenizationSpecification;
-}
-
-/**
- * Google Pay configuration
- */
-export interface GooglePayConfig {
-  environment: GooglePayEnvironment;
-  merchantId: string;
-  merchantName: string;
-  countryCode?: string; // Default: 'ET' (Estonia)
-  currencyCode?: string; // Default: 'EUR' (Euro)
-  allowedCardNetworks?: CardNetwork[]; // Default: ['VISA', 'MASTERCARD']
-  allowedCardAuthMethods?: CardAuthMethod[]; // Default: ['PAN_ONLY', 'CRYPTOGRAM_3DS']
-}
-
-/**
- * Payment request data
- */
-export interface PaymentData {
-  transactionId?: string; // Optional transaction ID
-  amount: string; // Payment amount as string (e.g., "29.99")
-  currencyCode: string; // Currency code (e.g., "EUR")
-  countryCode?: string; // Country code (default from config or "ET")
-  merchantInfo?: MerchantInfo; // Merchant info (optional, uses config if not provided)
-  allowedPaymentMethods?: PaymentMethod[]; // Payment methods (optional, uses config defaults)
-}
-
-/**
- * Card information from payment result
- */
-export interface CardInfo {
-  cardNetwork: string; // 'VISA' or 'MASTERCARD'
-  cardDetails: string; // Last 4 digits
-}
-
-/**
- * Tokenization data from payment result
- */
-export interface TokenizationData {
-  type: string;
-  token: string; // Payment token for processing
-}
-
-/**
- * Payment method data from result
- */
-export interface PaymentMethodData {
-  type: string;
-  description: string;
-  info: CardInfo;
-  tokenizationData: TokenizationData;
-}
-
-/**
- * Payment result from successful Google Pay transaction
- */
-export interface PaymentResult {
-  token: string; // EveryPay payment token
-  paymentMethodData: PaymentMethodData;
-  shippingAddress?: Address;
-  email?: string;
-}
-
-/**
  * Estonian market specific configuration defaults
  */
 export const EstonianDefaults = {
-  COUNTRY_CODE: 'ET',
+  COUNTRY_CODE: 'EE',
   CURRENCY_CODE: 'EUR',
   ALLOWED_CARD_NETWORKS: ['VISA', 'MASTERCARD'] as CardNetwork[],
   ALLOWED_AUTH_METHODS: ['CRYPTOGRAM_3DS'] as CardAuthMethod[], // Recommended for security
   GATEWAY: 'everypay',
 } as const;
 
-export interface GooglePayButtonConfig {
-  apiUsername: string;
-  apiSecret: string;
-  apiUrl: string;
+/**
+ * ========== NEW SDK-BASED TYPES ==========
+ */
+
+/**
+ * EveryPay configuration for SDK integration
+ * Supports both Backend and SDK modes
+ */
+export interface EverypayConfig {
   environment: GooglePayEnvironment;
   countryCode: string;
+  // SDK mode fields (optional - required only for SDK mode)
+  apiUsername?: string;
+  apiSecret?: string;
+  apiUrl?: string;
+  accountName?: string;
+  customerUrl?: string;
+  // Common fields
   currencyCode?: string;
-  accountName: string;
   allowedCardNetworks?: CardNetwork[];
   allowedCardAuthMethods?: CardAuthMethod[];
+  // Token request mode
+  requestToken?: boolean; // If true, request MIT token instead of making payment
 }
 
-export interface GooglePayRequest {
-  apiVersion: number;
-  apiVersionMinor: number;
-  allowedPaymentMethods: Array<{
-    type: string;
-    parameters: {
-      allowedAuthMethods: string[];
-      allowedCardNetworks: string[];
-    };
-    tokenizationSpecification: {
-      type: string;
-      parameters: {
-        gateway: string;
-        gatewayMerchantId: string;
-      };
-    };
-  }>;
-  merchantInfo: {
-    merchantId: string;
-    merchantName: string;
-  };
-  transactionInfo: {
-    totalPriceStatus: string;
-    totalPriceLabel: string;
-    totalPrice: string;
-    currencyCode: string;
-    countryCode: string;
-  };
-}
-export interface EveryPayGooglePayError extends Error {
-  code: string;
-  message: string;
-  details?: any;
+/**
+ * Backend data for Google Pay integration
+ * Combines open_session + create_payment responses from backend
+ */
+export interface GooglePayBackendData {
+  merchantId: string;
+  merchantName: string;
+  gatewayId: string;
+  gatewayMerchantId: string;
+  currency: string;
+  countryCode: string;
+  paymentReference: string;
+  mobileAccessToken: string;
+  amount: number;
+  label: string;
 }
 
-export interface PaymentProcessResponse {
-  state: string;
-  error?: EveryPayGooglePayError;
+/**
+ * Google Pay token data returned by SDK in backend mode
+ * Should be sent to backend for processing
+ */
+export interface GooglePayTokenData {
+  paymentReference: string;
+  mobileAccessToken: string;
+  signature: string;
+  intermediateSigningKey: {
+    signedKey: string;
+    signatures: string[];
+  };
+  protocolVersion: string;
+  signedMessage: string;
+  tokenConsentAgreed: boolean;
 }
+
+/**
+ * Token request result from SDK mode
+ * Extends GooglePayTokenData with payment details containing MIT token
+ */
+export interface TokenRequestResult extends GooglePayTokenData {
+  paymentDetails?: {
+    paymentReference: string;
+    paymentState: string;
+    ccDetails?: {
+      token?: string; // MIT token (24-char alphanumeric)
+      lastFourDigits?: string; // Last 4 digits of card
+      month?: string; // Expiration month
+      year?: string; // Expiration year (YYYY)
+    };
+  };
+}
+
+/**
+ * Payment data for SDK mode
+ */
+export interface SDKModePaymentData {
+  amount: string;
+  label: string;
+  orderReference: string;
+  customerEmail: string;
+  customerIp?: string;
+}
+
+/**
+ * Google Pay button types (matching SDK button types)
+ */
+export type GooglePayButtonType =
+  | 'buy' // "Buy with Google Pay" (default)
+  | 'book' // "Book with Google Pay"
+  | 'checkout' // "Checkout with Google Pay"
+  | 'donate' // "Donate with Google Pay"
+  | 'order' // "Order with Google Pay"
+  | 'pay' // Plain "Google Pay"
+  | 'subscribe'; // "Subscribe with Google Pay"
+
+/**
+ * Common props for GooglePayButton (used in all variants)
+ */
+type GooglePayButtonCommonProps = {
+  // Configuration
+  config: EverypayConfig;
+
+  /**
+   * Callback for handling payment/token data
+   * Receives different types based on mode and operation:
+   * - Backend + payment: GooglePayTokenData
+   * - Backend + token request: GooglePayTokenData
+   * - SDK + payment: { status: string }
+   * - SDK + token request: TokenRequestResult
+   */
+  onPressCallback: (paymentData: any) => Promise<any>;
+
+  // Callbacks
+  onPaymentSuccess?: (result: any) => void;
+  onPaymentError?: (error: Error) => void;
+  onPaymentCanceled?: () => void;
+
+  // Button styling
+  style?: import('react-native').StyleProp<import('react-native').ViewStyle>;
+  cornerRadius?: number;
+  theme?: 'dark' | 'light';
+  buttonType?: GooglePayButtonType;
+  disabled?: boolean;
+};
+
+/**
+ * Backend Mode props
+ * API credentials stay on backend (recommended)
+ * backendData contains all payment info including amount and label
+ */
+export type GooglePayButtonBackendProps = GooglePayButtonCommonProps & {
+  // Backend mode requires backendData from /create-payment endpoint
+  backendData: GooglePayBackendData;
+
+  // These props are not allowed in backend mode
+  amount?: never;
+  label?: never;
+  orderReference?: never;
+  customerEmail?: never;
+  customerIp?: never;
+  tokenLabel?: never;
+};
+
+/**
+ * SDK Mode props for a one-time payment
+ * Set `config.requestToken` to false (or omit) and provide payment details
+ */
+export type GooglePayButtonSDKPaymentProps = GooglePayButtonCommonProps & {
+  // SDK mode requires these fields for payment
+  amount: number;
+  label: string;
+  orderReference: string;
+  customerEmail: string;
+  customerIp?: string;
+
+  // These props are not allowed in SDK payment mode
+  backendData?: never;
+  tokenLabel?: never;
+};
+
+/**
+ * SDK Mode props for a token request (recurring payments)
+ * Set `config.requestToken` to true and provide a tokenLabel
+ */
+export type GooglePayButtonSDKTokenProps = GooglePayButtonCommonProps & {
+  // SDK mode token request requires tokenLabel
+  tokenLabel: string;
+
+  // Payment fields are not used when requesting a token
+  amount?: never;
+  label?: never;
+  orderReference?: never;
+  customerEmail?: never;
+  customerIp?: never;
+  backendData?: never;
+};
+
+/**
+ * SDK Mode props (discriminated union of payment and token-request variants)
+ */
+export type GooglePayButtonSDKProps =
+  | GooglePayButtonSDKPaymentProps
+  | GooglePayButtonSDKTokenProps;
+
+/**
+ * GooglePayButton props (discriminated union)
+ * Use Backend Mode (with backendData) or SDK Mode (payment or token request)
+ */
+export type GooglePayButtonProps =
+  | GooglePayButtonBackendProps
+  | GooglePayButtonSDKProps;

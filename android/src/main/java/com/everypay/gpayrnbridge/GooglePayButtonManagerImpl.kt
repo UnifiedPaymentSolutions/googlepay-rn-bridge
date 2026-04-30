@@ -20,4 +20,21 @@ object GooglePayButtonManagerImpl {
       view.theme = ButtonConstants.ButtonTheme.LIGHT;
     }
   }
+
+  fun setButtonType(view: GooglePayButtonView, buttonType: String?) {
+    view.buttonType = when(buttonType?.lowercase()) {
+      "book" -> ButtonConstants.ButtonType.BOOK
+      "checkout" -> ButtonConstants.ButtonType.CHECKOUT
+      "donate" -> ButtonConstants.ButtonType.DONATE
+      "order" -> ButtonConstants.ButtonType.ORDER
+      "pay" -> ButtonConstants.ButtonType.PAY
+      "subscribe" -> ButtonConstants.ButtonType.SUBSCRIBE
+      "buy" -> ButtonConstants.ButtonType.BUY
+      else -> ButtonConstants.ButtonType.BUY // default
+    }
+  }
+
+  fun setCornerRadius(view: GooglePayButtonView, cornerRadius: Int) {
+    view.cornerRadius = cornerRadius
+  }
 }

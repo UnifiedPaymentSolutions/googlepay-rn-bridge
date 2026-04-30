@@ -5,24 +5,31 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
-import uuid from 'react-native-uuid';
 
-import { isReadyToPay, init, loadPaymentData } from './index';
-import {
-  EstonianDefaults,
-  type GooglePayButtonConfig,
-  type GooglePayRequest,
-  type PaymentProcessResponse,
-} from './types';
-import {
-  getMerchantInfo,
-  openEPSession,
-  processPayment,
-  type GetMerchantInfoResponse,
-  type OpenEPSessionResponse,
-} from './EveryPayUtil/EveryPayRequests';
-import { EveryPayGooglePayError } from './everyPayError';
-import { ERROR_CODES } from './constants';
+import type { GooglePayButtonProps, SDKModePaymentData } from './types';
+
+// Shape of the allowedPaymentMethods entry the native Google Pay button expects.
+type AllowedPaymentMethod = {
+  type: 'CARD';
+  parameters: {
+    allowedCardNetworks: string[];
+    allowedAuthMethods: string[];
+  };
+  tokenizationSpecification: {
+    type: 'PAYMENT_GATEWAY';
+    parameters: {
+      gateway: string;
+      gatewayMerchantId: string;
+    };
+  };
+};
+
+// Only require the native module on Android — importing it on iOS would trigger
+// TurboModuleRegistry.getEnforcing at module load time and throw.
+const NativeEverypayGpayRnBridge =
+  Platform.OS === 'android'
+    ? require('./specs/NativeEverypayGpayRnBridge').default
+    : null;
 
 // Only require the native component on Android
 const NativeGooglePayButton =
@@ -41,294 +48,271 @@ const NativeGooglePayButton =
       })()
     : null;
 
-interface GooglePayButtonProps {
-  onPressCallback?: (result: PaymentProcessResponse) => void;
-  disabled?: boolean;
-  config: GooglePayButtonConfig;
-  theme?: 'light' | 'dark';
-  amount: number;
-  label: string;
-  orderReference: string;
-  customerEmail: string;
-  customerIp?: string;
-}
+const GooglePayButton: React.FC<GooglePayButtonProps> = (props) => {
+  const {
+    config,
+    onPressCallback,
+    onPaymentSuccess,
+    onPaymentError,
+    onPaymentCanceled,
+    style,
+    cornerRadius = 100,
+    theme = 'dark',
+    buttonType = 'buy',
+    disabled = false,
+  } = props;
 
-const GooglePayButton: React.FC<GooglePayButtonProps> = ({
-  onPressCallback,
-  disabled = false,
-  config,
-  theme = 'dark',
-  amount,
-  label,
-  orderReference,
-  customerEmail,
-  customerIp,
-}) => {
   const [isReady, setIsReady] = useState<boolean | null>(null);
   const [isMakingPaymentRequest, setIsMakingPaymentRequest] =
     useState<boolean>(false);
-  const [EPSessionInfo, setEPSessionInfo] =
-    useState<OpenEPSessionResponse | null>(null);
+  const [gatewayInfo, setGatewayInfo] = useState<{
+    gateway: string;
+    gatewayMerchantId: string;
+  } | null>(null);
 
-  const initGooglePay = async () => {
-    if (Platform.OS === 'ios') {
-      console.log('GooglePayButton is not supported on iOS');
-      return;
-    }
+  // Determine mode based on which props are present
+  const isBackendMode =
+    'backendData' in props && props.backendData !== undefined;
 
-    if (!NativeGooglePayButton) {
-      console.warn('Google Pay native component is not available');
-      return;
-    }
-
-    try {
-      await init(
-        config.environment,
-        config?.allowedCardNetworks || ['MASTERCARD', 'VISA'],
-        config?.allowedCardAuthMethods || ['PAN_ONLY', 'CRYPTOGRAM_3DS']
-      );
-
-      const readyToPay = await isReadyToPay();
-
-      const body = {
-        api_username: config.apiUsername,
-        account_name: 'EUR3D1',
-      };
-
-      const sessionInfo = await openEPSession(
-        config.apiUrl,
-        config.apiUsername,
-        config.apiSecret,
-        body
-      );
-
-      if (readyToPay && sessionInfo) {
-        setEPSessionInfo(sessionInfo);
-        setIsReady(readyToPay);
-      } else {
-        console.log('Google Pay is not available');
-      }
-    } catch (error: any) {
-      console.error('Error initializing Google Pay', error);
-      onPressCallback?.({
-        state: 'failed',
-        error: new EveryPayGooglePayError(
-          ERROR_CODES.GOOGLE_PAY_INITIALIZATION_FAILED,
-          error?.message
-        ),
-      });
-    }
-  };
+  const flatStyle = StyleSheet.flatten(style) as
+    | { height?: unknown; minHeight?: unknown; maxHeight?: unknown }
+    | undefined;
+  const hasHeightOverride =
+    flatStyle?.height != null ||
+    flatStyle?.minHeight != null ||
+    flatStyle?.maxHeight != null;
 
   useEffect(() => {
+    if (hasHeightOverride) {
+      console.warn(
+        '[GooglePayButton] style overrides height/minHeight/maxHeight. The native Google Pay button does not re-layout reliably when the parent height changes — use the `cornerRadius` prop for shape tweaks and verify any height override on-device. See README > Button Styling.'
+      );
+    }
+  }, [hasHeightOverride]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const initGooglePay = async () => {
+      if (Platform.OS === 'ios') {
+        console.log('GooglePayButton is not supported on iOS');
+        return;
+      }
+
+      if (!NativeGooglePayButton) {
+        console.warn('Google Pay native component is not available');
+        return;
+      }
+
+      try {
+        if (isBackendMode) {
+          // Backend mode: Use provided backend data (combines open_session + create_payment)
+          const backendData = (props as any).backendData;
+          const initResult =
+            await NativeEverypayGpayRnBridge.initializeWithBackendData(
+              config,
+              backendData
+            );
+
+          // Only update state if component is still mounted
+          if (isMounted) {
+            setIsReady(initResult.isReady);
+            // Store gateway info for button configuration
+            setGatewayInfo({
+              gateway: initResult.gatewayId,
+              gatewayMerchantId: initResult.gatewayMerchantId,
+            });
+          }
+        } else {
+          // SDK mode: Direct SDK initialization
+          const initResult =
+            await NativeEverypayGpayRnBridge.initializeSDKMode(config);
+
+          // Only update state if component is still mounted
+          if (isMounted) {
+            setIsReady(initResult.isReady);
+            // Store gateway info for button configuration
+            setGatewayInfo({
+              gateway: initResult.gatewayId,
+              gatewayMerchantId: initResult.gatewayMerchantId,
+            });
+          }
+        }
+      } catch (error: any) {
+        console.error('Error initializing Google Pay', error);
+        if (isMounted) {
+          onPaymentError?.(error);
+        }
+      }
+    };
+
     initGooglePay();
+
+    return () => {
+      isMounted = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const getAllowedPaymentMethods = () => {
-    // Don't create payment methods if we don't have merchant info yet
-    if (!EPSessionInfo) {
-      return [];
-    }
-
-    return [
-      {
-        type: 'CARD',
-        parameters: {
-          allowedCardNetworks: config?.allowedCardNetworks || [
-            'MASTERCARD',
-            'VISA',
-          ],
-          allowedAuthMethods: config?.allowedCardAuthMethods || [
-            'PAN_ONLY',
-            'CRYPTOGRAM_3DS',
-          ],
-        },
-        tokenizationSpecification: {
-          type: 'PAYMENT_GATEWAY',
-          parameters: {
-            gateway: EPSessionInfo.google_pay_gateway_id.toLowerCase(),
-            gatewayMerchantId:
-              EPSessionInfo.googlepay_merchant_identifier.toLowerCase(),
-          },
-        },
-      },
-    ];
-  };
-
   const onPress = async () => {
-    setIsMakingPaymentRequest(true);
-    let merchantInfo: GetMerchantInfoResponse | null = null;
-
-    try {
-      const body = {
-        api_username: config.apiUsername,
-        account_name: config.accountName,
-        amount: amount,
-        label,
-        currency_code: config.currencyCode || EstonianDefaults.CURRENCY_CODE,
-        country_code: config.countryCode,
-        order_reference: orderReference,
-        nonce: uuid.v4(),
-        mobile_payment: true,
-        customer_url: 'https://www.lhv.ee',
-        customer_ip: customerIp || '',
-        customer_email: customerEmail,
-        timestamp: new Date().toISOString(),
-      };
-
-      merchantInfo = await getMerchantInfo(
-        config.apiUrl,
-        config.apiUsername,
-        config.apiSecret,
-        body
-      );
-    } catch (error: any) {
-      setIsMakingPaymentRequest(false);
-      console.error('Error making merchant info request', error);
-      onPressCallback?.({
-        state: 'failed',
-        error: new EveryPayGooglePayError(
-          ERROR_CODES.MERCHANT_INFO_REQUEST_ERROR,
-          error?.message
-        ),
-      });
-    }
-
-    if (!EPSessionInfo) {
-      await initGooglePay();
-    }
-
-    if (!EPSessionInfo) {
-      console.log('EPSessionInfo is not set');
-      setIsMakingPaymentRequest(false);
+    // Defensive guard: mirrors the check in initGooglePay. The render guards
+    // (isReady + gatewayInfo) normally prevent this handler from running
+    // without a native module, but guarding here avoids a null-deref crash
+    // if state is ever externally manipulated (e.g. in tests).
+    if (!NativeEverypayGpayRnBridge) {
       return;
     }
 
+    setIsMakingPaymentRequest(true);
+
     try {
-      const googlePayRequest: GooglePayRequest = {
-        apiVersion: 2,
-        apiVersionMinor: 0,
-        allowedPaymentMethods: [
-          {
-            type: 'CARD',
-            parameters: {
-              allowedAuthMethods: config?.allowedCardAuthMethods || [
-                'PAN_ONLY',
-                'CRYPTOGRAM_3DS',
-              ],
-              allowedCardNetworks: config?.allowedCardNetworks || [
-                'MASTERCARD',
-                'VISA',
-              ],
-            },
-            tokenizationSpecification: {
-              type: 'PAYMENT_GATEWAY',
-              parameters: {
-                gateway: EPSessionInfo.google_pay_gateway_id.toLowerCase(),
-                gatewayMerchantId:
-                  EPSessionInfo.googlepay_gateway_merchant_id.toLowerCase(),
-              },
-            },
-          },
-        ],
-        merchantInfo: {
-          merchantId: EPSessionInfo.googlepay_merchant_identifier.toLowerCase(),
-          merchantName: EPSessionInfo.merchant_name || '-',
-        },
-        transactionInfo: {
-          totalPriceStatus: 'FINAL',
-          totalPrice: amount.toString(),
-          currencyCode: merchantInfo?.currency || 'EUR',
-          countryCode: merchantInfo?.descriptor_country || 'EE',
-          totalPriceLabel: label,
-        },
-      };
+      let paymentData: any;
 
-      const paymentData = await loadPaymentData(googlePayRequest);
+      // Check if this is a token request (recurring payments) or payment
+      const isTokenRequest = config.requestToken === true;
 
-      const token = JSON.parse(
-        JSON.parse(paymentData).paymentMethodData.tokenizationData.token
-      );
+      if (isBackendMode) {
+        // Backend mode flow
+        const backendData = (props as any).backendData;
 
-      const paymentProcessRequestBody = {
-        payment_reference: merchantInfo?.payment_reference || '',
-        token_consent_agreed: false,
-        signature: token.signature,
-        intermediateSigningKey: {
-          signedKey: token.intermediateSigningKey.signedKey,
-          signatures: token.intermediateSigningKey.signatures,
-        },
-        protocolVersion: token.protocolVersion,
-        signedMessage: token.signedMessage,
-      };
+        if (isTokenRequest) {
+          // Token request: Request MIT token for recurring payments
+          const tokenData =
+            await NativeEverypayGpayRnBridge.requestTokenWithBackendData(
+              backendData
+            );
 
-      const paymentProcessResponse = await processPayment(
-        config.apiUrl,
-        merchantInfo?.mobile_access_token || '',
-        paymentProcessRequestBody
-      );
+          // Call user callback with token data
+          paymentData = await onPressCallback(tokenData);
+        } else {
+          // Payment: Process one-time payment
+          // Step 1: Show Google Pay and get token
+          const tokenData =
+            await NativeEverypayGpayRnBridge.makePaymentWithBackendData(
+              backendData
+            );
 
-      if (onPressCallback) {
-        onPressCallback({
-          state: paymentProcessResponse.state,
-        });
-      }
-    } catch (e: any) {
-      if (e.code && e.message) {
-        console.error(
-          'GooglePayButton error',
-          `code: ${e.code}, message: ${e.message}`
-        );
-        onPressCallback?.({
-          state: 'failed',
-          error: new EveryPayGooglePayError(e.code, e.message),
-        });
+          // Step 2: Call user callback with token data
+          // User sends this to their backend /process-token endpoint
+          paymentData = await onPressCallback(tokenData);
+        }
       } else {
-        onPressCallback?.({ state: 'failed', error: e });
-        console.error('GooglePayButton error', e);
+        // SDK mode flow
+        if (isTokenRequest) {
+          // Token request: Request MIT token for recurring payments
+          const tokenLabel = (props as any).tokenLabel || 'Card verification';
+
+          // Validate tokenLabel is provided
+          if (!(props as any).tokenLabel) {
+            console.warn(
+              '[GooglePayButton] tokenLabel not provided for SDK mode token request, using default "Card verification"'
+            );
+          }
+
+          const tokenResult =
+            await NativeEverypayGpayRnBridge.requestTokenSDKMode(tokenLabel);
+
+          // Call user callback with token result
+          paymentData = await onPressCallback(tokenResult);
+        } else {
+          // Payment: Process one-time payment via SDK
+          const { amount, label, orderReference, customerEmail, customerIp } =
+            props as any;
+
+          const sdkPaymentData: SDKModePaymentData = {
+            amount: amount.toString(),
+            label,
+            orderReference,
+            customerEmail,
+            customerIp,
+          };
+
+          // Show Google Pay and process payment via SDK
+          const result =
+            await NativeEverypayGpayRnBridge.makePaymentSDKMode(sdkPaymentData);
+
+          // Call user callback with result
+          paymentData = await onPressCallback(result);
+        }
+      }
+
+      onPaymentSuccess?.(paymentData);
+    } catch (error: any) {
+      if (error.code === 'E_PAYMENT_CANCELED') {
+        console.log('Payment canceled by user');
+        onPaymentCanceled?.();
+      } else {
+        console.error('Payment error', error);
+        onPaymentError?.(error);
       }
     } finally {
       setIsMakingPaymentRequest(false);
     }
   };
 
-  if (!isReady || !EPSessionInfo) {
+  if (!isReady || !gatewayInfo) {
     return null;
   }
+
+  const paymentMethod: AllowedPaymentMethod = {
+    type: 'CARD',
+    parameters: {
+      allowedCardNetworks: config?.allowedCardNetworks || [
+        'MASTERCARD',
+        'VISA',
+      ],
+      allowedAuthMethods: config?.allowedCardAuthMethods || [
+        'PAN_ONLY',
+        'CRYPTOGRAM_3DS',
+      ],
+    },
+    tokenizationSpecification: {
+      type: 'PAYMENT_GATEWAY',
+      parameters: {
+        gateway: gatewayInfo.gateway,
+        gatewayMerchantId: gatewayInfo.gatewayMerchantId,
+      },
+    },
+  };
 
   return (
     <TouchableOpacity
       testID="google-pay-button"
       onPress={onPress}
       disabled={disabled || isMakingPaymentRequest}
-      // activeOpacity={disabled ? 0.3 : 1}
       style={[
+        styles.wrapper,
         disabled || isMakingPaymentRequest
           ? styles.disabled
           : styles.notDisabled,
+        style,
       ]}
     >
       <NativeGooglePayButton
         testID="native-google-pay-button"
-        allowedPaymentMethods={JSON.stringify(getAllowedPaymentMethods())}
+        allowedPaymentMethods={JSON.stringify([paymentMethod])}
+        cornerRadius={cornerRadius}
         theme={theme.toLowerCase()}
-        style={styles.nativeButtonStyle}
+        buttonType={buttonType.toLowerCase()}
+        style={styles.nativeButton}
       />
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
+  wrapper: {
+    alignSelf: 'stretch',
+    height: 48,
+  },
   disabled: {
     opacity: 0.4,
   },
   notDisabled: {
     opacity: 1,
   },
-  nativeButtonStyle: {
-    height: 100,
-    width: 300,
+  nativeButton: {
+    flex: 1,
   },
 });
 
