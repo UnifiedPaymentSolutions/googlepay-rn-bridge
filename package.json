@@ -40,7 +40,8 @@
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
     "format": "prettier --write \"**/*.{js,ts,tsx,json,css,md}\"",
-    "build": "bob build"
+    "build": "bob build",
+    "prepack": "bob build"
   },
   "keywords": [
     "react-native",
